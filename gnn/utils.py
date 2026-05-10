@@ -139,7 +139,11 @@ def compute_centered_variance(X, X_ref):
 def compute_dirichlet_energy(X, S):
     """E = tr(X^T L X) where L = I - S"""
     N = S.shape[0]
-    L = torch.eye(N, device=S.device, dtype=S.dtype) - S
+    if S.is_sparse:
+        S_dense = S.to_dense()
+    else:
+        S_dense = S
+    L = torch.eye(N, device=S.device, dtype=S_dense.dtype) - S_dense
     energy = torch.trace(X.T @ L @ X).item()
     return energy
 

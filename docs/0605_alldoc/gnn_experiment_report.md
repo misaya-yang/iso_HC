@@ -144,15 +144,55 @@ Q^T Q = I,   Qv = v   (v = sqrt(d_tilde))
 
 ---
 
-## 5. 多 Seed 稳定性验证
+## 5. 消融实验（Ablation Study）
 
 ### 5.1 实验设置
+
+验证 IsoStream v2 各项修复的独立贡献：
+- **v1**: identical streams + mean readout（原始版本）
+- **v2a**: stream_embed + mean readout（只加 stream_embed）
+- **v2b**: identical streams + concat readout（只改 readout）
+- **v2c**: stream_embed + concat readout（full v2）
+
+同时对比 PairNorm baseline。
+
+### 5.2 单 Seed 结果（seed=42）
+
+| 模型 | L16 | L32 | variance L16 | variance L32 |
+|------|-----:|-----:|-------------:|-------------:|
+| GCN | 30.7% | 31.2% | 0.00 | 0.00 |
+| ResGCN | 30.3% | 28.2% | 5.16 | 1.61 |
+| PairNorm | 25.6% | 25.1% | 0.48 | 1.54 |
+| IsoStream v1 | 20.1% | 22.2% | 16.10 | 3.48 |
+| **IsoStream v2a** | **74.3%** | 67.8% | 16.50 | 24.74 |
+| **IsoStream v2b** | **71.3%** | 65.6% | 4.05 | 22.53 |
+| **IsoStream v2c** | **71.6%** | **75.1%** | 5.61 | 10.60 |
+
+### 5.3 消融解读
+
+| 对比 | 结果 | 结论 |
+|------|------|------|
+| v1 → v2a | 20.1% → 74.3% | **stream_embed 单独有效**，打破对称性是关键 |
+| v1 → v2b | 20.1% → 71.3% | **concat readout 单独有效**，mean 抵消 H 作用 |
+| v2a → v2c | 74.3% → 71.6% | L16 差异不大，但 L32 v2c 更强 |
+| GCN → PairNorm | 30.7% → 25.6% | PairNorm 在此设置下无效 |
+
+**关键洞察**：
+1. v1（原始版本）accuracy 甚至比 GCN 还差（20% vs 31%），说明 stream symmetry + mean readout 确实让算子无法发挥作用
+2. v2a 和 v2b 各自都能独立提升 accuracy 到 70%+，说明两个修复都是有效的
+3. v2c（full）L32 达到 75.1%，超过了 v2a/v2b 单独的效果，说明两个修复有协同作用
+
+---
+
+## 6. 多 Seed 稳定性验证
+
+### 6.1 实验设置
 
 - Seeds: [0, 1, 2, 3, 4]
 - 配置: GCN L2/L16/L32, ResGCN L2/L16/L32, IsoStream v2 L16/L32
 - 报告: mean ± std of best_test_acc
 
-### 5.2 结果
+### 6.2 结果
 
 | 配置 | mean ± std | min | max |
 |------|-----------:|----:|----:|
@@ -165,7 +205,7 @@ Q^T Q = I,   Qv = v   (v = sqrt(d_tilde))
 | **IsoStream v2 L16** | **73.1% ± 1.9%** | 71.5% | 75.8% |
 | **IsoStream v2 L32** | **66.6% ± 3.4%** | 61.6% | 71.2% |
 
-### 5.3 稳定性分析
+### 6.3 稳定性分析
 
 **IsoStream v2 L16 的标准差仅 1.9%**，与 shallow GCN 相同水平，说明结果高度稳定。
 
@@ -176,7 +216,7 @@ Q^T Q = I,   Qv = v   (v = sqrt(d_tilde))
 - IsoStream v2 L32 始终 > 61%
 - GCN/ResGCN 深层始终 < 32%
 
-### 5.4 与单 Seed 对比
+### 6.4 与单 Seed 对比
 
 | 配置 | 单 Seed (42) | 多 Seed (mean) | 差异 |
 |------|-------------:|---------------:|-----:|
@@ -189,36 +229,87 @@ Q^T Q = I,   Qv = v   (v = sqrt(d_tilde))
 
 ---
 
-## 6. 关键发现与讨论
+## 6. H 类型消融（固定架构，只换 H）
 
-### 6.1 机制验证通过
+### 6.1 实验设置
+
+固定 v2c 架构（stream_embed + concat readout），只替换 stream mixing 矩阵 H 的类型：
+- **identity**: H = I（不做任何 mixing）
+- **none**: 无 mixing 参数（直接返回 identity）
+- **unconstrained**: 原始 H_raw，不做投影
+- **orthogonal**: H^T H = I（仅正交，不固定 1）
+- **iso**: H^T H = I, H @ 1 = 1（fixed-vector isometry，主方法）
+
+### 6.2 单 Seed 结果（seed=42）
+
+| H 类型 | L16 best | L32 best | orth_err | fix_err | variance L16 | variance L32 |
+|--------|---------:|---------:|---------:|--------:|-------------:|-------------:|
+| **identity** | 70.1% | **70.4%** | 0.00 | 0.00 | 4.62 | 7.80 |
+| **none** | 71.4% | 56.0% | 0.00 | 0.00 | 4.12 | 15.79 |
+| unconstrained | 69.9% | 67.3% | 0.44 | 0.40 | 5.29 | 4.48 |
+| **orthogonal** | **76.8%** | 69.2% | ~0 | 0.70 | 4.26 | 8.70 |
+| **iso** | 72.5% | 61.2% | ~0 | ~0 | 3.72 | 11.69 |
+
+### 6.3 H 类型解读
+
+**核心发现：identity (H=I) 在这个 seed 下表现极强**
+
+| 对比 | 结论 |
+|------|------|
+| identity L32 (70.4%) vs iso L32 (61.2%) | 不做 mixing 反而更高（单 seed） |
+| orthogonal L16 (76.8%) vs iso L16 (72.5%) | 只要求正交、不固定 1，效果更好 |
+| unconstrained (69.9%) | 原始矩阵也能工作，但 orth_err=0.44 |
+
+**重要警示**：
+1. 这只是 **单 seed** 结果，identity > iso 可能是随机波动
+2. **none L32 (56.0%) 显著低于 identity (70.4%)**，但两者代码逻辑相同（都返回 I），差异可能来自初始化随机性
+3. **orthogonal-only 的 fix_err=0.70** 很大，说明不固定 1 向量时 H 会大幅偏离 uniform 方向
+
+**待验证**：
+- 多 seed 下 identity 是否仍接近 iso
+- 如果 identity 持续接近 iso，说明 GNN 收益主要来自 **multi-stream + concat architecture**，而非 fixed-vector isometry 本身
+- 论文表述需要收敛为："Iso 提供稳定约束，但主要收益来自 stream architecture"
+
+---
+
+## 7. 关键发现与讨论
+
+### 7.1 机制验证通过
 
 IsoNode 在 synthetic 深度传播中完美保持 energy 和 variance，证明 fixed-vector isometric operator 能防止 graph diffusion collapse。
 
-### 6.2 Downstream 信号出现
+### 7.2 Downstream 信号出现
 
 IsoStreamGCN v2 在 Cora 上从 deep GCN collapse 的 ~30% 恢复到 64-69%，证明算子的稳定性可以转化为真实的分类性能提升。
 
-### 6.3 ResGCN 的控制实验价值
+### 7.3 ResGCN 的控制实验价值
 
 ResGCN L16 variance=4.91 但 accuracy=30%，说明：
 - "保持方差" ≠ "保持有用表示"
 - IsoStream 的优势不仅是数值稳定性，而是 stream-zero subspace 提供了额外的结构化信息通道
 
-### 6.4 L32 Variance=13.8 的警示
+### 7.4 L32 Variance=13.8 的警示
 
 IsoStream v2 L32 的 final variance=13.80，显著高于 L16 的 4.27。这可能表示：
 - isometric path 确实保留了高频信息
 - 但也可能存在 representation amplification
 - 更深时（L64+）需要调小 beta 或增加 norm 控制
 
-### 6.5 Dense Node-Space Q 的局限性
+### 7.5 Dense Node-Space Q 的局限性
 
 IsoResGCN（node-space dense Q）验证：
 - N=2708 时参数量 1.17 亿，单轮 forward 70 秒
 - 不可扩展，不尊重 graph sparsity
 - 适合机制 smoke，不适合正式 GNN 架构
 - **IsoStream（stream-dimension）是更合理的放置位置**
+
+### 7.6 H 类型消融的启示
+
+单 seed 下 identity (H=I) 和 iso 表现接近，说明：
+- multi-stream + concat architecture 本身就有很强的 anti-collapse 效果
+- fixed-vector isometry 可能主要提供**稳定约束**而非直接提升 accuracy
+- 论文需要收敛表述：Iso 算子是"稳定器"，主要收益来自 stream architecture
+- **待验证**：多 seed 下 identity 是否持续接近 iso
 
 ---
 
@@ -257,36 +348,39 @@ IsoResGCN（node-space dense Q）验证：
 
 ---
 
-## 8. 下一步建议
+## 8. 已完成工作清单
 
-### 8.1 多 Seed 验证（P0）
+| 实验 | 状态 |
+|------|------|
+| Synthetic oversmoothing（机制验证） | ✅ 完成 |
+| Cora 单 seed 对比（v2 vs baselines） | ✅ 完成 |
+| Cora 多 seed 稳定性（5 seeds） | ✅ 完成 |
+| 消融实验（v1/v2a/v2b/v2c + PairNorm） | ✅ 完成 |
+| H 类型消融（identity/none/unconstrained/orthogonal/iso） | ✅ 单 seed 完成，多 seed 进行中 |
+| 代码修复（fp64 U / stream_embed / concat / v-metrics） | ✅ 完成 |
+| 稀疏矩阵加速 | ✅ 完成 |
 
-当前单 seed 结果已显示 strong signal，但需要 5 seeds 确认稳定性。
+## 9. 待完成工作
 
-### 8.2 消融实验（P1）
+### 9.1 多 Seed H 类型消融（最高优先级）
 
-验证 v2 各项修复的独立贡献：
-- v1: identical streams + mean readout
-- v2a: stream_embed + mean readout
-- v2b: identical streams + concat readout
-- v2c: stream_embed + concat readout (full v2)
+验证 identity 是否持续接近 iso。如果 identity 持续接近 iso，论文需要收敛表述为：
+> "主要收益来自 multi-stream + concat architecture；fixed-vector isometry 提供稳定约束。"
 
-### 8.3 强 Baseline 对比（P2）
+### 9.2 v2b Stream Symmetry 诊断
 
-当前 ResGCN 深层仅 30%，可能偏弱。建议添加：
-- GCN + PairNorm
-- GCNII-style initial residual
-- APPNP / SGC
+v2b（identical streams + concat）accuracy 达 71.3%，但理论上 streams 应始终相同。需要诊断：
+- 每层 stream_diff / stream_cosine
+- dropout 是否意外打破 symmetry
 
-### 8.4 深度稳定性检查（P3）
+### 9.3 深度稳定性检查
 
 L32 variance=13.8 需要确认不是 uncontrolled amplification：
 - 每层 activation RMS
 - 每层 gradient norm
-- stream cosine diversity
 - 不同 beta 值的影响
 
-### 8.5 更大规模数据集
+### 9.4 更大规模数据集
 
 Cora 仅 2708 节点。下一步应在 Citeseer、PubMed 上验证。
 

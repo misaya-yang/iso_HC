@@ -200,35 +200,42 @@ def build_model(model_name, in_dim, hidden_dim, out_dim, num_layers,
             dropout=dropout, use_norm=use_norm,
             ns_steps=ns_steps, use_svd=use_svd,
         )
-    elif model_name == 'isostream':
+    elif model_name.startswith('isostream'):
+        # Parse isostream variant: isostream_v2c_ortho etc
+        parts = model_name.split('_')
+        use_stream_embed = True
+        use_concat_readout = True
+        use_message_dropout = True
+        mixing_type = 'iso'
+
+        if 'v1' in parts:
+            use_stream_embed = False
+            use_concat_readout = False
+            use_message_dropout = False
+        elif 'v2a' in parts:
+            use_stream_embed = True
+            use_concat_readout = False
+            use_message_dropout = True
+        elif 'v2b' in parts:
+            use_stream_embed = False
+            use_concat_readout = True
+            use_message_dropout = True
+
+        # H type override
+        if 'identity' in parts:
+            mixing_type = 'identity'
+        elif 'none' in parts:
+            mixing_type = 'none'
+        elif 'unconstrained' in parts:
+            mixing_type = 'unconstrained'
+        elif 'orthogonal' in parts:
+            mixing_type = 'orthogonal'
+
         return IsoStreamGCN(
             in_dim, hidden_dim, out_dim, num_layers,
             n_streams=n_streams, beta=beta, dropout=dropout, ns_steps=ns_steps,
-            use_stream_embed=True, use_concat_readout=True, use_message_dropout=True,
-        )
-    elif model_name == 'isostream_v1':
-        return IsoStreamGCN(
-            in_dim, hidden_dim, out_dim, num_layers,
-            n_streams=n_streams, beta=beta, dropout=dropout, ns_steps=ns_steps,
-            use_stream_embed=False, use_concat_readout=False, use_message_dropout=False,
-        )
-    elif model_name == 'isostream_v2a':
-        return IsoStreamGCN(
-            in_dim, hidden_dim, out_dim, num_layers,
-            n_streams=n_streams, beta=beta, dropout=dropout, ns_steps=ns_steps,
-            use_stream_embed=True, use_concat_readout=False, use_message_dropout=True,
-        )
-    elif model_name == 'isostream_v2b':
-        return IsoStreamGCN(
-            in_dim, hidden_dim, out_dim, num_layers,
-            n_streams=n_streams, beta=beta, dropout=dropout, ns_steps=ns_steps,
-            use_stream_embed=False, use_concat_readout=True, use_message_dropout=True,
-        )
-    elif model_name == 'isostream_v2c':
-        return IsoStreamGCN(
-            in_dim, hidden_dim, out_dim, num_layers,
-            n_streams=n_streams, beta=beta, dropout=dropout, ns_steps=ns_steps,
-            use_stream_embed=True, use_concat_readout=True, use_message_dropout=True,
+            use_stream_embed=use_stream_embed, use_concat_readout=use_concat_readout,
+            use_message_dropout=use_message_dropout, mixing_type=mixing_type,
         )
     else:
         raise ValueError(f"Unknown model: {model_name}")
@@ -242,7 +249,7 @@ def run_single_config(model_name, config, in_dim, hidden_dim, out_dim,
     model = build_model(
         model_name, in_dim, hidden_dim, out_dim,
         config['num_layers'], n_nodes, v,
-        config['beta'], config.get('gamma', 0.0),
+        config.get('beta', 0.0), config.get('gamma', 0.0),
         config['dropout'], config.get('use_norm', False),
         config.get('ns_steps', 5), config.get('use_svd', False),
         config.get('n_streams', 4),
@@ -341,6 +348,7 @@ def run_cora_isores_grid(layers_list, gammas, betas,
 
     adj = edge_index_to_adj(edge_index, N)
     S, d = normalize_adjacency(adj)
+    S = S.to_sparse()  # use sparse adjacency for speedup
 
     x = x.to(device)
     S = S.to(device)
@@ -395,22 +403,14 @@ def run_cora_isores_grid(layers_list, gammas, betas,
                 'num_layers': num_layers, 'dropout': dropout,
             }))
 
-    # IsoStreamGCN ablations
-    for ablation_name in ['isostream_v1', 'isostream_v2a', 'isostream_v2b', 'isostream_v2c']:
-        if ablation_name in models:
-            for num_layers in layers_list:
-                for beta in betas:
-                    configs.append((ablation_name, {
-                        'num_layers': num_layers, 'beta': beta,
-                        'dropout': dropout,
-                        'ns_steps': ns_steps, 'n_streams': 4,
-                    }))
-
-    # IsoStreamGCN v2 (alias for v2c)
-    if 'isostream' in models:
+    # IsoStreamGCN variants (v1/v2a/v2b/v2c + H-type ablations)
+    # Match any model name starting with 'isostream'
+    for model_name in models:
+        if not model_name.startswith('isostream'):
+            continue
         for num_layers in layers_list:
             for beta in betas:
-                configs.append(('isostream_v2c', {
+                configs.append((model_name, {
                     'num_layers': num_layers, 'beta': beta,
                     'dropout': dropout,
                     'ns_steps': ns_steps, 'n_streams': 4,
@@ -463,11 +463,21 @@ def plot_results(all_results, layers_list, output_dir):
     # Plot 1: Best test accuracy by model and depth
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    for model_name in ['gcn', 'resgcn', 'isores']:
+    labels = {
+        'gcn': 'GCN', 'resgcn': 'ResGCN', 'isores': 'IsoRes-GCN',
+        'isostream': 'IsoStream-GCN', 'isostream_v1': 'IsoStream v1',
+        'isostream_v2a': 'IsoStream v2a', 'isostream_v2b': 'IsoStream v2b',
+        'isostream_v2c': 'IsoStream v2c', 'pairnorm': 'PairNorm-GCN',
+    }
+    markers = {
+        'gcn': 'o', 'resgcn': 's', 'isores': '^',
+        'isostream': 'D', 'isostream_v1': 'x', 'isostream_v2a': '+',
+        'isostream_v2b': '*', 'isostream_v2c': 'D', 'pairnorm': 'v',
+    }
+    for model_name in labels.keys():
         depths = []
         accs = []
         for num_layers in layers_list:
-            # Find best config for this model+depth
             best_acc = 0.0
             for key, r in all_results.items():
                 if r['model'] == model_name and r['config']['num_layers'] == num_layers:
@@ -478,9 +488,8 @@ def plot_results(all_results, layers_list, output_dir):
                 accs.append(best_acc)
 
         if depths:
-            label = {'gcn': 'GCN', 'resgcn': 'ResGCN', 'isores': 'IsoRes-GCN', 'isostream': 'IsoStream-GCN'}[model_name]
-            marker = {'gcn': 'o', 'resgcn': 's', 'isores': '^', 'isostream': 'D'}[model_name]
-            ax.plot(depths, accs, marker=marker, label=label, linewidth=2, markersize=8)
+            ax.plot(depths, accs, marker=markers.get(model_name, 'o'),
+                    label=labels.get(model_name, model_name), linewidth=2, markersize=8)
 
     ax.set_xlabel('Number of Layers')
     ax.set_ylabel('Best Test Accuracy')
@@ -543,7 +552,7 @@ def plot_results(all_results, layers_list, output_dir):
             os_metrics = all_results[target_key]['oversmoothing']
             layers = [m['layer'] for m in os_metrics]
             variances = [m['centered_variance'] for m in os_metrics]
-            label = {'gcn': 'GCN', 'resgcn': 'ResGCN', 'isores': 'IsoRes-GCN', 'isostream': 'IsoStream-GCN'}[model_name]
+            label = labels.get(model_name, model_name)
             ax.plot(layers, variances, marker='o', label=label, linewidth=2)
 
     ax.set_xlabel('Layer')
@@ -588,7 +597,8 @@ def save_summary(all_results, output_dir='results/gnn_stage1/cora_isores'):
         f.write("## Best by Model Type\n\n")
         f.write("| model | best config | best_test | best_val | n_params |\n")
         f.write("|-------|-------------|----------:|---------:|---------:|\n")
-        for model_name in ['gcn', 'resgcn', 'isores', 'isostream']:
+        all_model_names = set(r['model'] for r in all_results.values())
+        for model_name in sorted(all_model_names):
             best_for_model = max(
                 [(k, v) for k, v in all_results.items() if v['model'] == model_name],
                 key=lambda x: x[1]['best_test_acc'],

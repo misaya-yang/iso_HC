@@ -138,7 +138,7 @@ class IsoStreamGCN(nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers,
                  n_streams=4, beta=0.5, dropout=0.5, ns_steps=5,
                  use_stream_embed=True, use_concat_readout=True,
-                 use_message_dropout=True):
+                 use_message_dropout=True, mixing_type='iso'):
         super().__init__()
         self.num_layers = num_layers
         self.n_streams = n_streams
@@ -148,6 +148,7 @@ class IsoStreamGCN(nn.Module):
         self.use_stream_embed = use_stream_embed
         self.use_concat_readout = use_concat_readout
         self.use_message_dropout = use_message_dropout
+        self.mixing_type = mixing_type
 
         # Shared input projection
         self.input_proj = nn.Linear(in_dim, hidden_dim, bias=False)
@@ -166,7 +167,7 @@ class IsoStreamGCN(nn.Module):
 
         # Iso mixing matrices: one per layer
         self.iso_mixings = nn.ModuleList([
-            IsoStreamMixing(n_streams, ns_steps=ns_steps)
+            IsoStreamMixing(n_streams, mixing_type=mixing_type, ns_steps=ns_steps)
             for _ in range(num_layers)
         ])
 
@@ -249,39 +250,63 @@ class IsoStreamGCN(nn.Module):
 
 class IsoStreamMixing(nn.Module):
     """
-    Learnable isometric mixing for stream dimension.
+    Learnable mixing for stream dimension with multiple projection types.
 
-    Projects H_raw ∈ R^{s×s} to M_1 = {H : H^T H = I, H @ 1 = 1}.
+    mixing_type:
+      - 'iso':      H^T H = I, H @ 1 = 1  (fixed-vector isometry)
+      - 'identity': H = I  (no mixing)
+      - 'none':     no parameter, return identity
+      - 'unconstrained': raw H, no projection
+      - 'orthogonal': H^T H = I only (no fixed-vector constraint)
     """
 
-    def __init__(self, n_streams, ns_steps=5):
+    def __init__(self, n_streams, mixing_type='iso', ns_steps=5):
         super().__init__()
         self.n_streams = n_streams
+        self.mixing_type = mixing_type
         self.ns_steps = ns_steps
 
-        # Raw parameter: near identity
-        H_init = torch.eye(n_streams, dtype=torch.float32)
-        H_init += torch.randn(n_streams, n_streams, dtype=torch.float32) * 0.01
-        self.H_raw = nn.Parameter(H_init)
+        if mixing_type in ('iso', 'unconstrained', 'orthogonal'):
+            # Raw parameter: near identity
+            H_init = torch.eye(n_streams, dtype=torch.float32)
+            H_init += torch.randn(n_streams, n_streams, dtype=torch.float32) * 0.01
+            self.H_raw = nn.Parameter(H_init)
+        elif mixing_type in ('identity', 'none'):
+            self.H_raw = None
 
-        # Precompute U for 1-vector (same as IsoHC)
-        from isohc.projection import construct_orthogonal_complement
-        U = construct_orthogonal_complement(n_streams, device='cpu', dtype=torch.float32)
-        self.register_buffer('U', U)
+        if mixing_type == 'iso':
+            # Precompute U for 1-vector (same as IsoHC)
+            from isohc.projection import construct_orthogonal_complement
+            U = construct_orthogonal_complement(n_streams, device='cpu', dtype=torch.float32)
+            self.register_buffer('U', U)
 
     def forward(self):
-        """Return projected H."""
-        from isohc.projection import iso_ns_project
-        return iso_ns_project(self.H_raw, U=self.U, steps=self.ns_steps, use_svd=False)
+        """Return mixing matrix H."""
+        if self.mixing_type == 'identity' or self.mixing_type == 'none':
+            return torch.eye(self.n_streams, device='cuda' if torch.cuda.is_available() else 'cpu', dtype=torch.float32)
+        elif self.mixing_type == 'unconstrained':
+            return self.H_raw
+        elif self.mixing_type == 'orthogonal':
+            # Polar decomposition via SVD: H = U Vh
+            U, s, Vh = torch.linalg.svd(self.H_raw, full_matrices=False)
+            return U @ Vh
+        elif self.mixing_type == 'iso':
+            from isohc.projection import iso_ns_project
+            return iso_ns_project(self.H_raw, U=self.U, steps=self.ns_steps, use_svd=False)
+        else:
+            raise ValueError(f"Unknown mixing_type: {self.mixing_type}")
 
     def get_diagnostics(self):
         """Return projection diagnostics."""
+        if self.mixing_type in ('identity', 'none'):
+            return {'orth_error': 0.0, 'fix_error': 0.0}
         H = self.forward()
         n = self.n_streams
         ones = torch.ones(n, 1, device=H.device, dtype=torch.float32)
         I = torch.eye(n, device=H.device, dtype=torch.float32)
         orth_error = torch.norm(H.T @ H - I, p='fro').item()
         fix_error = torch.norm(H @ ones - ones, p=2).item()
+        return {'orth_error': orth_error, 'fix_error': fix_error}
 
         # Energy preservation
         X_test = torch.randn(n, 128, device=H.device, dtype=torch.float32)
