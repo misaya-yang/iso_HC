@@ -12,9 +12,11 @@ from .utils import (
     compute_dirichlet_energy,
     compute_pairwise_cosine,
     compute_invariant_error,
+    compute_invariant_error_norm,
+    compute_v_centered_variance,
 )
 from .projection import construct_orthogonal_complement_v, iso_ns_project_v, newton_schulz_polar_v
-from .models import GCN, ResGCN, IsoStreamGCN
+from .models import GCN, ResGCN, IsoStreamGCN, IsoResGCN
 
 __all__ = [
     "generate_sbm_graph",
@@ -28,10 +30,13 @@ __all__ = [
     "compute_dirichlet_energy",
     "compute_pairwise_cosine",
     "compute_invariant_error",
+    "compute_invariant_error_norm",
+    "compute_v_centered_variance",
     "construct_orthogonal_complement_v",
     "iso_ns_project_v",
     "newton_schulz_polar_v",
     "GCN",
     "ResGCN",
     "IsoStreamGCN",
+    "IsoResGCN",
 ]

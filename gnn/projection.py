@@ -66,7 +66,7 @@ def polar_decomposition_svd_v(A):
     return U @ Vh
 
 
-def iso_ns_project_v(H_raw, v, steps=10, use_svd=True, return_diagnostics=False):
+def iso_ns_project_v(H_raw, v, steps=10, use_svd=True, return_diagnostics=False, U=None):
     """
     Project H_raw onto M_v = {Q ∈ O(n) : Qv = v}.
 
@@ -101,11 +101,14 @@ def iso_ns_project_v(H_raw, v, steps=10, use_svd=True, return_diagnostics=False)
     # Step 1: normalize fixed vector
     e0 = v_c / (torch.norm(v_c) + 1e-12)  # (n,)
 
-    # Step 2: construct orthogonal complement
-    U = construct_orthogonal_complement_v(n, v_c, device=device, dtype=compute_dtype)
+    # Step 2: construct orthogonal complement (use precomputed U if provided)
+    if U is None:
+        U_comp = construct_orthogonal_complement_v(n, v_c, device=device, dtype=compute_dtype)
+    else:
+        U_comp = U.to(device=device, dtype=compute_dtype)
 
     # Step 3: project to subspace
-    A = U.T @ H_raw_c @ U  # (n-1, n-1)
+    A = U_comp.T @ H_raw_c @ U_comp  # (n-1, n-1)
 
     # Step 4: polar decomposition
     if use_svd:
@@ -115,7 +118,7 @@ def iso_ns_project_v(H_raw, v, steps=10, use_svd=True, return_diagnostics=False)
 
     # Step 5: reconstruct
     e0_mat = e0.unsqueeze(1)  # (n, 1)
-    Q = e0_mat @ e0_mat.T + U @ R @ U.T
+    Q = e0_mat @ e0_mat.T + U_comp @ R @ U_comp.T
 
     Q = Q.to(dtype)
 
@@ -143,29 +146,31 @@ class IsoNodeProjection(nn.Module):
         self.ns_steps = ns_steps
         self.use_svd = use_svd
 
-        # Register fixed vector as non-trainable buffer
-        self.register_buffer('v', v.float())
+        # Register fixed vector in fp64 for numerical accuracy
+        v64 = v.double()
+        self.register_buffer('v', v64)
 
-        # Raw unconstrained parameter
+        # Raw unconstrained parameter (kept in fp32 for training efficiency)
         if init_identity:
             self.H_raw = nn.Parameter(torch.eye(n, dtype=torch.float32))
         else:
             self.H_raw = nn.Parameter(torch.randn(n, n, dtype=torch.float32) * 0.01)
             self.H_raw.data += torch.eye(n, dtype=torch.float32)
 
-        # Precompute U (pass raw v for arithmetic-exact orthogonality)
-        U = construct_orthogonal_complement_v(n, self.v, device='cpu', dtype=torch.float32)
+        # Precompute U in fp64 for arithmetic-exact orthogonality.
+        # fp32 QR on large n gives U^T v ~ 1e-4; fp64 gives ~ 1e-13.
+        U = construct_orthogonal_complement_v(n, v64, device='cpu', dtype=torch.float64)
         self.register_buffer('U', U)
 
     def forward(self):
         """Return projected Q."""
-        return iso_ns_project_v(self.H_raw, self.v, steps=self.ns_steps, use_svd=self.use_svd)
+        return iso_ns_project_v(self.H_raw, self.v, steps=self.ns_steps, use_svd=self.use_svd, U=self.U)
 
     def get_diagnostics(self):
         """Return projection error diagnostics."""
         Q = self.forward()
-        v_col = self.v.unsqueeze(1)
-        I = torch.eye(self.n, device=Q.device, dtype=torch.float32)
+        v_col = self.v.to(Q.dtype).unsqueeze(1)
+        I = torch.eye(self.n, device=Q.device, dtype=Q.dtype)
         orth_error = torch.norm(Q.T @ Q - I, p='fro').item()
         fix_error = torch.norm(Q @ v_col - v_col, p=2).item()
         return {

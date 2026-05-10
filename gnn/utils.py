@@ -194,6 +194,56 @@ def compute_invariant_error(X, X_ref, v):
     return torch.norm(vTX - vTX_ref, p=2).item()
 
 
+def compute_invariant_error_norm(X, X_ref, v):
+    """
+    Normalized invariant error: ||v^T(X - X_ref)||_2 / ||X_ref||_F.
+
+    This is invariant_error scaled by reference feature norm,
+    making it comparable across feature dimensions and scales.
+    """
+    vTX = v @ X
+    vTX_ref = v @ X_ref
+    num = torch.norm(vTX - vTX_ref, p=2)
+    den = torch.norm(X_ref, p='fro') + 1e-12
+    return (num / den).item()
+
+
+def compute_v_centered_variance(X, X_ref, v):
+    """
+    Graph-native centered variance: variance after projecting away the
+    invariant direction v = sqrt(d).
+
+    For symmetric normalized adjacency S = D^{-1/2} A D^{-1/2},
+    the natural invariant direction is v = sqrt(d), not the all-ones vector.
+
+    We compute:
+      e = v / ||v||
+      X_perp = X - e @ (e^T @ X)
+      ratio = ||X_perp||_F / ||X_ref_perp||_F
+
+    Args:
+        X: (N, d) current features
+        X_ref: (N, d) reference features
+        v: (N,) invariant vector (e.g., sqrt of degree)
+
+    Returns:
+        ratio: float
+    """
+    e = v / (torch.norm(v) + 1e-12)
+    e_mat = e.unsqueeze(1)  # (N, 1)
+
+    # Project away v direction
+    X_proj = e_mat @ (e_mat.T @ X)
+    X_perp = X - X_proj
+
+    X_ref_proj = e_mat @ (e_mat.T @ X_ref)
+    X_ref_perp = X_ref - X_ref_proj
+
+    num = torch.norm(X_perp, p='fro')
+    den = torch.norm(X_ref_perp, p='fro') + 1e-12
+    return (num / den).item()
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Data Splitting
 # ──────────────────────────────────────────────────────────────────────────────

@@ -24,7 +24,8 @@ from gnn import (
     graph_propagation,
     compute_energy_ratio, compute_centered_variance,
     compute_dirichlet_energy, compute_pairwise_cosine,
-    compute_invariant_error,
+    compute_invariant_error, compute_invariant_error_norm,
+    compute_v_centered_variance,
 )
 from gnn.projection import iso_ns_project_v
 
@@ -117,12 +118,14 @@ def run_oversmoothing_diagnostic(num_nodes, feature_dim, num_classes,
                 'depth': depth,
                 'energy_ratio': compute_energy_ratio(X, X0),
                 'centered_variance': compute_centered_variance(X, X0),
+                'v_centered_variance': compute_v_centered_variance(X, X0, v),
                 'dirichlet_energy': compute_dirichlet_energy(X, S),
                 'pairwise_cosine': compute_pairwise_cosine(X, num_samples=2000),
             }
 
             if method == 'isonode':
                 metrics['invariant_error'] = compute_invariant_error(X, X0, v)
+                metrics['invariant_error_norm'] = compute_invariant_error_norm(X, X0, v)
 
             all_results[method][depth] = metrics
 
@@ -278,16 +281,19 @@ def save_results(all_results, passed, depths, output_dir='results/gnn_stage1/syn
         f.write(f"**Overall:** {'PASS' if passed else 'FAIL'}\n\n")
 
         f.write("## Results\n\n")
-        f.write("| method | depth | energy | variance | cosine | dirichlet | inv_error |\n")
-        f.write("|--------|------:|-------:|---------:|-------:|----------:|----------:|\n")
+        f.write("| method | depth | energy | var | v_var | cosine | dirichlet | inv_err | inv_norm |\n")
+        f.write("|--------|------:|-------:|----:|------:|-------:|----------:|--------:|---------:|\n")
         for method in sorted(all_results.keys()):
             for depth in sorted(all_results[method].keys()):
                 r = all_results[method][depth]
                 inv = r.get('invariant_error', 'n/a')
                 inv_str = f"{inv:.2e}" if isinstance(inv, float) else inv
+                inv_norm = r.get('invariant_error_norm', 'n/a')
+                inv_norm_str = f"{inv_norm:.2e}" if isinstance(inv_norm, float) else inv_norm
                 f.write(f"| {method} | {depth} | {r['energy_ratio']:.4f} | "
-                       f"{r['centered_variance']:.4f} | {r['pairwise_cosine']:.4f} | "
-                       f"{r['dirichlet_energy']:.4f} | {inv_str} |\n")
+                       f"{r['centered_variance']:.4f} | {r['v_centered_variance']:.4f} | "
+                       f"{r['pairwise_cosine']:.4f} | {r['dirichlet_energy']:.4f} | "
+                       f"{inv_str} | {inv_norm_str} |\n")
 
     print(f"\nResults saved to {json_path} and {md_path}")
 
