@@ -16,7 +16,7 @@ from .utils import (
     compute_v_centered_variance,
 )
 from .projection import construct_orthogonal_complement_v, iso_ns_project_v, newton_schulz_polar_v
-from .models import GCN, ResGCN, IsoStreamGCN, IsoResGCN
+from .models import GCN, ResGCN, IsoStreamGCN, IsoResGCN, PairNormGCN
 
 __all__ = [
     "generate_sbm_graph",
@@ -39,4 +39,5 @@ __all__ = [
     "ResGCN",
     "IsoStreamGCN",
     "IsoResGCN",
+    "PairNormGCN",
 ]

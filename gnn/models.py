@@ -121,10 +121,10 @@ class IsoStreamGCN(nn.Module):
     """
     IsoStream-GCN v2: multiple streams with isometric mixing.
 
-    Fixes from v1:
-      1. Deterministic stream diversity via learned stream_embed
-      2. Dropout only on message branch (not residual state)
-      3. Concat readout (not mean) so stream-zero subspace survives
+    Ablation controls:
+      - use_stream_embed: add learned per-stream embedding (v2 fix)
+      - use_concat_readout: concat streams instead of mean (v2 fix)
+      - use_message_dropout: dropout only on message branch (v2 fix)
 
     Maintains s streams: X_l ∈ R^{s × N × d}
     Each layer:
@@ -132,26 +132,31 @@ class IsoStreamGCN(nn.Module):
       X_{l+1} = H_l @ X_l + β · Y_l              ← update
     where H_l ∈ M_{1_s} (orthogonal, preserves 1 vector)
 
-    Final readout: Z = concat over streams → Linear
+    Final readout: Z = concat or mean over streams → Linear
     """
 
     def __init__(self, in_dim, hidden_dim, out_dim, num_layers,
-                 n_streams=4, beta=0.5, dropout=0.5, ns_steps=5):
+                 n_streams=4, beta=0.5, dropout=0.5, ns_steps=5,
+                 use_stream_embed=True, use_concat_readout=True,
+                 use_message_dropout=True):
         super().__init__()
         self.num_layers = num_layers
         self.n_streams = n_streams
         self.beta = beta
         self.dropout = dropout
         self.hidden_dim = hidden_dim
+        self.use_stream_embed = use_stream_embed
+        self.use_concat_readout = use_concat_readout
+        self.use_message_dropout = use_message_dropout
 
         # Shared input projection
         self.input_proj = nn.Linear(in_dim, hidden_dim, bias=False)
 
-        # Stream-specific embedding for deterministic diversity.
-        # Each stream starts from a different direction in hidden space.
-        self.stream_embed = nn.Parameter(
-            torch.randn(n_streams, 1, hidden_dim) * 0.02
-        )
+        # Stream-specific embedding for deterministic diversity (v2 fix)
+        if use_stream_embed:
+            self.stream_embed = nn.Parameter(
+                torch.randn(n_streams, 1, hidden_dim) * 0.02
+            )
 
         # GCN layers: one per layer, shared across streams
         self.gcn_layers = nn.ModuleList([
@@ -160,69 +165,70 @@ class IsoStreamGCN(nn.Module):
         ])
 
         # Iso mixing matrices: one per layer
-        # H ∈ R^{s×s}, H^T H = I, H @ 1 = 1
         self.iso_mixings = nn.ModuleList([
             IsoStreamMixing(n_streams, ns_steps=ns_steps)
             for _ in range(num_layers)
         ])
 
-        # Output: concat streams → linear projection
-        self.output_proj = nn.Linear(n_streams * hidden_dim, out_dim, bias=False)
+        # Output: concat streams → linear projection, or mean → linear
+        if use_concat_readout:
+            self.output_proj = nn.Linear(n_streams * hidden_dim, out_dim, bias=False)
+        else:
+            self.output_proj = nn.Linear(hidden_dim, out_dim, bias=False)
 
     def forward(self, x, S):
-        """
-        x: (N, d_in)
-        S: (N, N) normalized adjacency
-        Returns: (N, out_dim) logits
-        """
         N = x.shape[0]
-
-        # Project input
-        x = self.input_proj(x)  # (N, hidden_dim)
+        x = self.input_proj(x)
         x = F.relu(x)
 
-        # Expand to streams with deterministic diversity
-        # Each stream = base + stream-specific bias
-        x_streams = x.unsqueeze(0) + self.stream_embed  # (s, N, hidden_dim)
+        if self.use_stream_embed:
+            x_streams = x.unsqueeze(0) + self.stream_embed
+        else:
+            x_streams = x.unsqueeze(0).repeat(self.n_streams, 1, 1)
+            x_streams = F.dropout(x_streams, p=self.dropout, training=self.training)
 
         for gcn_layer, iso_mix in zip(self.gcn_layers, self.iso_mixings):
-            # Apply GCN to each stream (dropout only on message input)
             y_streams = []
             for s in range(self.n_streams):
-                x_s = x_streams[s]  # (N, hidden_dim)
-                # Dropout only on message branch input, not residual state
-                x_s_drop = F.dropout(x_s, p=self.dropout, training=self.training)
-                y = gcn_layer(x_s_drop, S)  # (N, hidden_dim)
+                x_s = x_streams[s]
+                if self.use_message_dropout:
+                    x_s_drop = F.dropout(x_s, p=self.dropout, training=self.training)
+                else:
+                    x_s_drop = F.dropout(x_streams, p=self.dropout, training=self.training)[s]
+                y = gcn_layer(x_s_drop, S)
                 y = F.relu(y)
                 y_streams.append(y)
-            y_streams = torch.stack(y_streams, dim=0)  # (s, N, hidden_dim)
+            y_streams = torch.stack(y_streams, dim=0)
 
-            # Iso mixing: X_new = H @ X + β * Y
-            H = iso_mix()  # (s, s)
-            mixed = torch.einsum('ij,jnd->ind', H, x_streams)  # (s, N, hidden_dim)
+            H = iso_mix()
+            mixed = torch.einsum('ij,jnd->ind', H, x_streams)
             x_streams = mixed + self.beta * y_streams
 
-        # Concat readout: preserve all stream information
-        x = x_streams.permute(1, 0, 2).reshape(N, self.n_streams * self.hidden_dim)
+            if not self.use_message_dropout:
+                x_streams = F.dropout(x_streams, p=self.dropout, training=self.training)
+
+        if self.use_concat_readout:
+            x = x_streams.permute(1, 0, 2).reshape(N, self.n_streams * self.hidden_dim)
+        else:
+            x = x_streams.mean(dim=0)
         return self.output_proj(x)
 
     def get_hidden_states(self, x, S):
-        """Get hidden states (concat of all streams) at each layer."""
         states = []
         N = x.shape[0]
-
         x = self.input_proj(x)
         x = F.relu(x)
-        x_streams = x.unsqueeze(0) + self.stream_embed
-        # Store mean for consistency with other models' state shape
+        if self.use_stream_embed:
+            x_streams = x.unsqueeze(0) + self.stream_embed
+        else:
+            x_streams = x.unsqueeze(0).repeat(self.n_streams, 1, 1)
         states.append(x_streams.mean(dim=0).detach().clone())
 
         for gcn_layer, iso_mix in zip(self.gcn_layers, self.iso_mixings):
             y_streams = []
             for s in range(self.n_streams):
                 x_s = x_streams[s]
-                x_s_drop = F.dropout(x_s, p=self.dropout, training=self.training)
-                y = gcn_layer(x_s_drop, S)
+                y = gcn_layer(x_s, S)
                 y = F.relu(y)
                 y_streams.append(y)
             y_streams = torch.stack(y_streams, dim=0)
@@ -235,7 +241,6 @@ class IsoStreamGCN(nn.Module):
         return states
 
     def get_iso_diagnostics(self):
-        """Get IsoStream projection diagnostics."""
         diags = []
         for mix in self.iso_mixings:
             diags.append(mix.get_diagnostics())
@@ -401,3 +406,70 @@ class IsoResGCN(nn.Module):
         for op in self.iso_operators:
             diags.append(op.get_diagnostics())
         return diags
+
+
+class PairNorm(nn.Module):
+    """PairNorm: centering + scaling for node features.
+
+    Reference: Zhao & Akoglu (2020), "PairNorm: Tackling Oversmoothing in GNNs"
+
+    PN(X) = (X - mean(X)) / ||X - mean(X)||_F * sqrt(N)
+    """
+
+    def __init__(self, scale=1.0):
+        super().__init__()
+        self.scale = scale
+
+    def forward(self, x):
+        # x: (N, d)
+        mean = x.mean(dim=0, keepdim=True)
+        x = x - mean
+        norm = torch.norm(x, p='fro') + 1e-12
+        return x / norm * self.scale * (x.shape[0] ** 0.5)
+
+
+class PairNormGCN(nn.Module):
+    """GCN + PairNorm: standard architecture with PairNorm after each layer."""
+
+    def __init__(self, in_dim, hidden_dim, out_dim, num_layers, dropout=0.5):
+        super().__init__()
+        self.num_layers = num_layers
+        self.dropout = dropout
+
+        self.input_proj = nn.Linear(in_dim, hidden_dim, bias=False)
+        self.layers = nn.ModuleList([
+            GCNLayer(hidden_dim, hidden_dim)
+            for _ in range(num_layers)
+        ])
+        self.pn_layers = nn.ModuleList([
+            PairNorm()
+            for _ in range(num_layers)
+        ])
+        self.output_proj = nn.Linear(hidden_dim, out_dim, bias=False)
+
+    def forward(self, x, S):
+        x = self.input_proj(x)
+        x = F.relu(x)
+        x = F.dropout(x, p=self.dropout, training=self.training)
+
+        for layer, pn in zip(self.layers, self.pn_layers):
+            x = layer(x, S)
+            x = F.relu(x)
+            x = pn(x)
+            x = F.dropout(x, p=self.dropout, training=self.training)
+
+        return self.output_proj(x)
+
+    def get_hidden_states(self, x, S):
+        states = []
+        x = self.input_proj(x)
+        x = F.relu(x)
+        states.append(x.detach().clone())
+
+        for layer, pn in zip(self.layers, self.pn_layers):
+            x = layer(x, S)
+            x = F.relu(x)
+            x = pn(x)
+            states.append(x.detach().clone())
+
+        return states
