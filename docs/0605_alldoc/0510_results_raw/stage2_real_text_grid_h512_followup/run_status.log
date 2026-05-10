@@ -1,0 +1,3 @@
+RUN_STATUS model=isohc layers=16 batch=32 status=0
+RUN_STATUS model=baseline layers=32 batch=16 status=0
+RUN_STATUS model=isohc layers=32 batch=16 status=0

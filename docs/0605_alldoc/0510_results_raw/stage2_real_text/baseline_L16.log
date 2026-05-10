@@ -1,0 +1,30 @@
+======================================================================
+Stage 2: Real Text Byte-LM Smoke
+======================================================================
+model=baseline layers=16 params=16,916,736
+data_bytes=1,115,394 train=1,003,854 val=111,540
+batch_size=32 context=256 steps=1000
+step     1/1000 loss=5.5470 grad=10.1626 lr=0.00e+00 time=633.7ms
+step    51/1000 loss=3.6403 grad=1.6853 lr=1.50e-04 time=85.3ms
+step   101/1000 loss=2.6317 grad=0.5937 lr=3.00e-04 time=82.0ms
+step   151/1000 loss=2.4679 grad=0.5602 lr=2.98e-04 time=81.4ms
+step   201/1000 loss=2.3937 grad=1.1950 lr=2.91e-04 time=81.2ms
+step   251/1000 loss=2.2564 grad=1.0176 lr=2.80e-04 time=60.6ms
+step   301/1000 loss=2.1877 grad=1.2835 lr=2.65e-04 time=85.0ms
+step   351/1000 loss=2.0280 grad=1.6810 lr=2.46e-04 time=89.3ms
+step   401/1000 loss=1.9297 grad=1.3632 lr=2.25e-04 time=81.3ms
+step   451/1000 loss=1.8157 grad=1.8917 lr=2.01e-04 time=88.5ms
+step   501/1000 loss=1.6557 grad=1.8642 lr=1.76e-04 time=83.3ms
+step   551/1000 loss=1.6152 grad=1.6712 lr=1.50e-04 time=82.8ms
+step   601/1000 loss=1.6094 grad=1.7067 lr=1.24e-04 time=86.7ms
+step   651/1000 loss=1.5020 grad=1.4521 lr=9.87e-05 time=84.8ms
+step   701/1000 loss=1.5058 grad=1.4725 lr=7.50e-05 time=87.9ms
+step   751/1000 loss=1.4574 grad=1.2759 lr=5.36e-05 time=85.6ms
+step   801/1000 loss=1.3949 grad=1.3643 lr=3.51e-05 time=85.0ms
+step   851/1000 loss=1.4281 grad=1.3972 lr=2.01e-05 time=85.1ms
+step   901/1000 loss=1.3863 grad=1.2136 lr=9.05e-06 time=84.8ms
+step   951/1000 loss=1.3832 grad=1.2236 lr=2.28e-06 time=86.4ms
+step  1000/1000 loss=1.3796 grad=1.3272 lr=9.14e-10 time=87.2ms
+Validation loss: 1.6104
+Result: PASSED
+Saved to results/stage2_real_text/real_text_baseline_L16.json

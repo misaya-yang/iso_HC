@@ -1,0 +1,56 @@
+======================================================================
+Experiment 3: Tiny Transformer Smoke Test
+======================================================================
+
+Model: isohc
+Parameters: 68,260,096
+
+Training isohc for 300 steps...
+  Model params: 68,260,096
+  Precision: bf16
+  Batch size: 8, Accum steps: 4
+  Step    1/300 | loss=8.3694 | grad_norm=0.8384 | lr=0.00e+00 | time=383.9ms | orth=5.28e-07 fix=2.80e-07 energy=[1.0000, 1.0000]
+  Step   21/300 | loss=8.3539 | grad_norm=0.2239 | lr=1.20e-04 | time=286.2ms | orth=6.62e-07 fix=3.42e-07 energy=[1.0000, 1.0000]
+  Step   41/300 | loss=8.3336 | grad_norm=0.1895 | lr=2.40e-04 | time=282.8ms | orth=6.62e-07 fix=3.37e-07 energy=[1.0000, 1.0000]
+  Step   61/300 | loss=8.3285 | grad_norm=0.1838 | lr=2.99e-04 | time=294.2ms | orth=5.57e-07 fix=3.42e-07 energy=[1.0000, 1.0000]
+  Step   81/300 | loss=8.3343 | grad_norm=0.1849 | lr=2.89e-04 | time=282.2ms | orth=6.43e-07 fix=4.04e-07 energy=[1.0000, 1.0000]
+  Step  101/300 | loss=8.3294 | grad_norm=0.1788 | lr=2.71e-04 | time=282.4ms | orth=6.54e-07 fix=3.95e-07 energy=[1.0000, 1.0000]
+  Step  121/300 | loss=8.3241 | grad_norm=0.1754 | lr=2.46e-04 | time=282.6ms | orth=6.52e-07 fix=4.00e-07 energy=[1.0000, 1.0000]
+  Step  141/300 | loss=8.3266 | grad_norm=0.1784 | lr=2.14e-04 | time=289.9ms | orth=5.58e-07 fix=3.58e-07 energy=[1.0000, 1.0000]
+  Step  161/300 | loss=8.3240 | grad_norm=0.1766 | lr=1.78e-04 | time=281.5ms | orth=6.54e-07 fix=3.42e-07 energy=[1.0000, 1.0000]
+  Step  181/300 | loss=8.3184 | grad_norm=0.1750 | lr=1.41e-04 | time=300.4ms | orth=6.54e-07 fix=3.82e-07 energy=[1.0000, 1.0000]
+  Step  201/300 | loss=8.3260 | grad_norm=0.1709 | lr=1.04e-04 | time=286.4ms | orth=6.51e-07 fix=4.09e-07 energy=[1.0000, 1.0000]
+  Step  221/300 | loss=8.3209 | grad_norm=0.1755 | lr=6.96e-05 | time=287.2ms | orth=5.67e-07 fix=3.42e-07 energy=[1.0000, 1.0000]
+  Step  241/300 | loss=8.3201 | grad_norm=0.1737 | lr=4.07e-05 | time=284.1ms | orth=6.60e-07 fix=4.34e-07 energy=[1.0000, 1.0000]
+  Step  261/300 | loss=8.3209 | grad_norm=0.1719 | lr=1.86e-05 | time=285.7ms | orth=6.62e-07 fix=3.48e-07 energy=[1.0000, 1.0000]
+  Step  281/300 | loss=8.3183 | grad_norm=0.1730 | lr=4.71e-06 | time=283.0ms | orth=6.70e-07 fix=3.48e-07 energy=[1.0000, 1.0000]
+  Step  300/300 | loss=8.3223 | grad_norm=0.1744 | lr=1.18e-08 | time=283.7ms | orth=6.52e-07 fix=3.58e-07 energy=[1.0000, 1.0000]
+
+======================================================================
+Pass Evaluation
+======================================================================
+
+Steps completed: 300/300
+NaN in grads: False
+Inf in grads: False
+NaN/Inf in loss: False
+  [PASS] No NaN or Inf
+Final loss: 8.3223
+Max loss: 8.3694
+  [PASS] Loss numerically stable
+Max grad_norm: 0.8384
+  [PASS] Gradient norm bounded
+Max orth_error: 6.70e-07
+  [PASS] orth_error within bounds
+Max fix_error: 4.34e-07
+  [PASS] fix_error within bounds
+Energy ratio range: [1.0000, 1.0000]
+  [PASS] energy ratios within bounds
+
+Results saved to results/stage2_depth_scaling/tiny_smoke_isohc.json and results/stage2_depth_scaling/tiny_smoke_isohc.md
+
+Total time: 303.6s
+
+======================================================================
+Experiment 3 (isohc): PASSED
+======================================================================

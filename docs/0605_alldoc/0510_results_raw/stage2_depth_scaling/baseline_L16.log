@@ -1,0 +1,50 @@
+======================================================================
+Experiment 3: Tiny Transformer Smoke Test
+======================================================================
+
+Model: baseline
+Parameters: 17,899,776
+
+Training baseline for 300 steps...
+  Model params: 17,899,776
+  Precision: bf16
+  Batch size: 8, Accum steps: 4
+  Step    1/300 | loss=8.3710 | grad_norm=0.7466 | lr=0.00e+00 | time=213.0ms
+  Step   21/300 | loss=8.3507 | grad_norm=0.2971 | lr=1.20e-04 | time=82.0ms
+  Step   41/300 | loss=8.3356 | grad_norm=0.1995 | lr=2.40e-04 | time=78.0ms
+  Step   61/300 | loss=8.3287 | grad_norm=0.1882 | lr=2.99e-04 | time=78.1ms
+  Step   81/300 | loss=8.3298 | grad_norm=0.1875 | lr=2.89e-04 | time=76.1ms
+  Step  101/300 | loss=8.3286 | grad_norm=0.1813 | lr=2.71e-04 | time=77.8ms
+  Step  121/300 | loss=8.3274 | grad_norm=0.1764 | lr=2.46e-04 | time=80.2ms
+  Step  141/300 | loss=8.3234 | grad_norm=0.1791 | lr=2.14e-04 | time=78.0ms
+  Step  161/300 | loss=8.3217 | grad_norm=0.1771 | lr=1.78e-04 | time=78.1ms
+  Step  181/300 | loss=8.3211 | grad_norm=0.1759 | lr=1.41e-04 | time=84.5ms
+  Step  201/300 | loss=8.3266 | grad_norm=0.1717 | lr=1.04e-04 | time=80.5ms
+  Step  221/300 | loss=8.3200 | grad_norm=0.1751 | lr=6.96e-05 | time=78.1ms
+  Step  241/300 | loss=8.3191 | grad_norm=0.1729 | lr=4.07e-05 | time=78.0ms
+  Step  261/300 | loss=8.3196 | grad_norm=0.1719 | lr=1.86e-05 | time=79.0ms
+  Step  281/300 | loss=8.3177 | grad_norm=0.1726 | lr=4.71e-06 | time=81.7ms
+  Step  300/300 | loss=8.3219 | grad_norm=0.1750 | lr=1.18e-08 | time=77.3ms
+
+======================================================================
+Pass Evaluation
+======================================================================
+
+Steps completed: 300/300
+NaN in grads: False
+Inf in grads: False
+NaN/Inf in loss: False
+  [PASS] No NaN or Inf
+Final loss: 8.3219
+Max loss: 8.3710
+  [PASS] Loss numerically stable
+Max grad_norm: 0.7466
+  [PASS] Gradient norm bounded
+
+Results saved to results/stage2_depth_scaling/tiny_smoke_baseline.json and results/stage2_depth_scaling/tiny_smoke_baseline.md
+
+Total time: 74.7s
+
+======================================================================
+Experiment 3 (baseline): PASSED
+======================================================================

@@ -1,0 +1,50 @@
+======================================================================
+Stage 2: Real Text Byte-LM Smoke
+======================================================================
+model=isohc layers=32 params=134,660,608
+data_bytes=1,115,394 train=1,003,854 val=111,540
+batch_size=16 context=512 steps=2000
+step     1/2000 loss=5.6120 grad=16.4688 lr=0.00e+00 time=958.3ms orth=4.08e-07 fix=2.92e-07 energy=[1.0000,1.0000]
+step    51/2000 loss=3.0893 grad=2.9787 lr=7.50e-05 time=245.8ms orth=2.20e-05 fix=3.48e-07 energy=[1.0000,1.0000]
+step   101/2000 loss=2.5634 grad=0.9231 lr=1.50e-04 time=246.3ms orth=5.81e-05 fix=3.63e-07 energy=[1.0000,1.0000]
+step   151/2000 loss=2.4783 grad=0.6472 lr=2.25e-04 time=247.1ms orth=8.39e-05 fix=3.42e-07 energy=[1.0000,1.0000]
+step   201/2000 loss=2.4341 grad=0.6713 lr=3.00e-04 time=247.1ms orth=1.29e-04 fix=3.53e-07 energy=[1.0000,1.0000]
+step   251/2000 loss=2.4073 grad=0.8179 lr=2.99e-04 time=248.5ms orth=1.68e-04 fix=3.42e-07 energy=[1.0000,1.0000]
+step   301/2000 loss=2.2326 grad=0.8347 lr=2.98e-04 time=247.4ms orth=1.63e-04 fix=3.42e-07 energy=[1.0000,1.0000]
+step   351/2000 loss=2.1253 grad=0.8374 lr=2.95e-04 time=248.5ms orth=1.74e-04 fix=3.48e-07 energy=[1.0000,1.0000]
+step   401/2000 loss=2.0450 grad=0.9251 lr=2.91e-04 time=250.7ms orth=2.01e-04 fix=3.42e-07 energy=[1.0000,1.0000]
+step   451/2000 loss=1.8879 grad=1.1607 lr=2.86e-04 time=250.5ms orth=1.89e-04 fix=3.72e-07 energy=[1.0000,1.0000]
+step   501/2000 loss=1.7355 grad=1.0640 lr=2.80e-04 time=247.4ms orth=2.38e-04 fix=3.53e-07 energy=[1.0000,1.0000]
+step   551/2000 loss=1.7238 grad=0.7795 lr=2.73e-04 time=247.1ms orth=2.58e-04 fix=3.48e-07 energy=[1.0000,1.0000]
+step   601/2000 loss=1.6191 grad=0.8452 lr=2.65e-04 time=247.1ms orth=2.82e-04 fix=3.72e-07 energy=[1.0000,1.0000]
+step   651/2000 loss=1.5852 grad=0.7821 lr=2.56e-04 time=247.1ms orth=2.97e-04 fix=3.67e-07 energy=[1.0000,1.0000]
+step   701/2000 loss=1.4746 grad=0.7776 lr=2.46e-04 time=247.2ms orth=3.79e-04 fix=3.67e-07 energy=[1.0000,1.0001]
+step   751/2000 loss=1.4091 grad=0.8248 lr=2.36e-04 time=244.5ms orth=3.67e-04 fix=3.67e-07 energy=[1.0000,1.0001]
+step   801/2000 loss=1.3460 grad=0.6402 lr=2.25e-04 time=249.6ms orth=3.91e-04 fix=3.48e-07 energy=[1.0000,1.0001]
+step   851/2000 loss=1.3630 grad=0.6497 lr=2.13e-04 time=253.0ms orth=4.06e-04 fix=3.63e-07 energy=[1.0000,1.0000]
+step   901/2000 loss=1.2917 grad=0.6308 lr=2.01e-04 time=247.2ms orth=4.10e-04 fix=3.67e-07 energy=[1.0000,1.0001]
+step   951/2000 loss=1.2835 grad=0.7643 lr=1.89e-04 time=940.3ms orth=3.97e-04 fix=3.42e-07 energy=[1.0000,1.0001]
+step  1001/2000 loss=1.2555 grad=0.6753 lr=1.76e-04 time=1193.7ms orth=4.06e-04 fix=3.53e-07 energy=[1.0000,1.0001]
+step  1051/2000 loss=1.2472 grad=0.7409 lr=1.63e-04 time=1206.4ms orth=4.02e-04 fix=3.77e-07 energy=[1.0000,1.0001]
+step  1101/2000 loss=1.2661 grad=0.6753 lr=1.50e-04 time=2313.8ms orth=3.91e-04 fix=3.72e-07 energy=[1.0000,1.0001]
+step  1151/2000 loss=1.1581 grad=0.6250 lr=1.37e-04 time=1406.6ms orth=4.14e-04 fix=3.48e-07 energy=[1.0000,1.0001]
+step  1201/2000 loss=1.2040 grad=0.7878 lr=1.24e-04 time=1602.0ms orth=4.22e-04 fix=3.32e-07 energy=[1.0000,1.0001]
+step  1251/2000 loss=1.1438 grad=0.7258 lr=1.11e-04 time=1495.6ms orth=4.20e-04 fix=3.48e-07 energy=[1.0000,1.0001]
+step  1301/2000 loss=1.0901 grad=0.7686 lr=9.87e-05 time=1692.5ms orth=4.15e-04 fix=3.48e-07 energy=[1.0000,1.0001]
+step  1351/2000 loss=1.0803 grad=0.7516 lr=8.66e-05 time=1880.4ms orth=4.03e-04 fix=3.72e-07 energy=[1.0000,1.0001]
+step  1401/2000 loss=1.0803 grad=0.8061 lr=7.50e-05 time=1500.7ms orth=4.02e-04 fix=3.77e-07 energy=[1.0000,1.0001]
+step  1451/2000 loss=1.0148 grad=0.9525 lr=6.40e-05 time=1508.6ms orth=4.12e-04 fix=3.48e-07 energy=[1.0000,1.0001]
+step  1501/2000 loss=0.9570 grad=0.8643 lr=5.36e-05 time=362.5ms orth=4.40e-04 fix=3.42e-07 energy=[1.0000,1.0001]
+step  1551/2000 loss=0.9930 grad=0.9033 lr=4.39e-05 time=409.2ms orth=4.46e-04 fix=3.72e-07 energy=[1.0000,1.0001]
+step  1601/2000 loss=1.0035 grad=1.0041 lr=3.51e-05 time=404.0ms orth=4.42e-04 fix=3.63e-07 energy=[1.0000,1.0001]
+step  1651/2000 loss=0.9556 grad=1.1010 lr=2.71e-05 time=367.1ms orth=4.48e-04 fix=4.21e-07 energy=[1.0000,1.0001]
+step  1701/2000 loss=0.9099 grad=1.0124 lr=2.01e-05 time=408.2ms orth=4.44e-04 fix=3.48e-07 energy=[1.0000,1.0001]
+step  1751/2000 loss=0.8427 grad=1.0734 lr=1.41e-05 time=433.4ms orth=4.47e-04 fix=3.48e-07 energy=[1.0000,1.0001]
+step  1801/2000 loss=0.9166 grad=1.0276 lr=9.05e-06 time=1398.6ms orth=4.45e-04 fix=3.48e-07 energy=[1.0000,1.0001]
+step  1851/2000 loss=0.8461 grad=0.9281 lr=5.11e-06 time=1889.5ms orth=4.41e-04 fix=3.58e-07 energy=[1.0000,1.0001]
+step  1901/2000 loss=0.8609 grad=0.9195 lr=2.28e-06 time=1586.1ms orth=4.42e-04 fix=3.67e-07 energy=[1.0000,1.0001]
+step  1951/2000 loss=0.8542 grad=0.9185 lr=5.71e-07 time=1383.0ms orth=4.42e-04 fix=3.72e-07 energy=[1.0000,1.0001]
+step  2000/2000 loss=0.8627 grad=0.8988 lr=2.28e-10 time=1306.3ms orth=4.42e-04 fix=4.00e-07 energy=[1.0000,1.0000]
+Validation loss: 1.7194
+Result: PASSED
+Saved to results/stage2_real_text_grid_h512_followup/real_text_isohc_L32.json

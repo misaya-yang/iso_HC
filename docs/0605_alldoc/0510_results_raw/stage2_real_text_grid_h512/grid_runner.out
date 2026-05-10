@@ -1,0 +1,9 @@
+======================================================================
+Running baseline L16
+/root/miniconda3/bin/python3 experiments/stage2_real_text_smoke.py --model baseline --layers 16 --hidden-dim 512 --heads 8 --streams 8 --context-length 512 --steps 2000 --batch-size 32 --precision bf16 --learning-rate 0.0003 --warmup-steps 200 --device cuda --output-dir results/stage2_real_text_grid_h512 --data-path data/tinyshakespeare/input.txt
+status=0 log=results/stage2_real_text_grid_h512/baseline_L16.log
+======================================================================
+Running baseline L32
+/root/miniconda3/bin/python3 experiments/stage2_real_text_smoke.py --model baseline --layers 32 --hidden-dim 512 --heads 8 --streams 8 --context-length 512 --steps 2000 --batch-size 32 --precision bf16 --learning-rate 0.0003 --warmup-steps 200 --device cuda --output-dir results/stage2_real_text_grid_h512 --data-path data/tinyshakespeare/input.txt
+status=1 log=results/stage2_real_text_grid_h512/baseline_L32.log
+Saved summary to results/stage2_real_text_grid_h512/summary.md

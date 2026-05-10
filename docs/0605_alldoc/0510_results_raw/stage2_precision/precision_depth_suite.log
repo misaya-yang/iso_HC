@@ -1,0 +1,55 @@
+Precision/depth suite
+device NVIDIA GeForce RTX 5090
+streams [4, 8] depths [32, 64, 128, 256, 512] trials 16
+variants ['fp64', 'fp32', 'bf16_all', 'bf16_fp32_mix']
+
+=== fp64 ===
+variant=fp64           n=4 L= 32 energy=1.000000 grad=1.000000 mean_max=7.892e-07 left_max=1.788e-07 right_max=1.686e-07 orth_max=8.097e-07 time=1.1s
+variant=fp64           n=4 L= 64 energy=1.000000 grad=1.000000 mean_max=7.802e-07 left_max=1.788e-07 right_max=1.686e-07 orth_max=7.679e-07 time=1.2s
+variant=fp64           n=4 L=128 energy=1.000000 grad=1.000000 mean_max=7.934e-07 left_max=1.788e-07 right_max=1.686e-07 orth_max=9.656e-07 time=2.5s
+variant=fp64           n=4 L=256 energy=1.000000 grad=1.000000 mean_max=7.735e-07 left_max=1.885e-07 right_max=2.065e-07 orth_max=1.038e-06 time=5.0s
+variant=fp64           n=4 L=512 energy=1.000000 grad=1.000000 mean_max=8.243e-07 left_max=1.788e-07 right_max=1.788e-07 orth_max=1.026e-06 time=9.9s
+variant=fp64           n=8 L= 32 energy=1.000000 grad=1.000000 mean_max=6.550e-07 left_max=2.980e-07 right_max=2.384e-07 orth_max=2.916e-07 time=0.9s
+variant=fp64           n=8 L= 64 energy=1.000000 grad=1.000000 mean_max=6.655e-07 left_max=2.980e-07 right_max=2.980e-07 orth_max=2.908e-07 time=1.7s
+variant=fp64           n=8 L=128 energy=1.000000 grad=1.000000 mean_max=6.583e-07 left_max=3.039e-07 right_max=2.796e-07 orth_max=3.109e-07 time=3.5s
+variant=fp64           n=8 L=256 energy=1.000000 grad=1.000000 mean_max=6.713e-07 left_max=3.210e-07 right_max=2.980e-07 orth_max=3.238e-07 time=7.0s
+variant=fp64           n=8 L=512 energy=1.000000 grad=1.000000 mean_max=6.647e-07 left_max=3.210e-07 right_max=2.980e-07 orth_max=3.119e-07 time=14.0s
+
+=== fp32 ===
+variant=fp32           n=4 L= 32 energy=1.000000 grad=1.000000 mean_max=3.808e-06 left_max=1.686e-07 right_max=1.686e-07 orth_max=7.314e-07 time=0.6s
+variant=fp32           n=4 L= 64 energy=1.000000 grad=1.000000 mean_max=5.677e-06 left_max=1.686e-07 right_max=1.788e-07 orth_max=9.841e-07 time=1.3s
+variant=fp32           n=4 L=128 energy=1.000000 grad=1.000000 mean_max=7.539e-06 left_max=1.788e-07 right_max=1.788e-07 orth_max=9.005e-07 time=2.5s
+variant=fp32           n=4 L=256 energy=1.000000 grad=1.000000 mean_max=1.149e-05 left_max=1.686e-07 right_max=2.065e-07 orth_max=8.878e-07 time=5.0s
+variant=fp32           n=4 L=512 energy=1.000000 grad=1.000000 mean_max=1.679e-05 left_max=1.788e-07 right_max=1.885e-07 orth_max=9.341e-07 time=10.0s
+variant=fp32           n=8 L= 32 energy=1.000000 grad=1.000000 mean_max=2.940e-06 left_max=2.980e-07 right_max=2.666e-07 orth_max=2.888e-07 time=0.9s
+variant=fp32           n=8 L= 64 energy=1.000000 grad=1.000000 mean_max=4.090e-06 left_max=3.039e-07 right_max=2.796e-07 orth_max=2.843e-07 time=1.7s
+variant=fp32           n=8 L=128 energy=1.000000 grad=1.000000 mean_max=6.263e-06 left_max=2.980e-07 right_max=2.980e-07 orth_max=2.972e-07 time=3.5s
+variant=fp32           n=8 L=256 energy=1.000000 grad=1.000000 mean_max=8.117e-06 left_max=3.039e-07 right_max=2.920e-07 orth_max=2.980e-07 time=7.0s
+variant=fp32           n=8 L=512 energy=1.000000 grad=1.000000 mean_max=1.176e-05 left_max=3.097e-07 right_max=2.980e-07 orth_max=3.205e-07 time=14.0s
+
+=== bf16_all ===
+variant=bf16_all       n=4 L= 32 energy=1.001112 grad=1.001214 mean_max=1.754e-01 left_max=1.460e-07 right_max=1.686e-07 orth_max=3.498e-07 time=0.8s
+variant=bf16_all       n=4 L= 64 energy=1.000986 grad=1.000760 mean_max=2.338e-01 left_max=1.686e-07 right_max=1.788e-07 orth_max=7.441e-07 time=1.3s
+variant=bf16_all       n=4 L=128 energy=0.998759 grad=0.998679 mean_max=3.576e-01 left_max=1.788e-07 right_max=2.065e-07 orth_max=1.007e-06 time=2.5s
+variant=bf16_all       n=4 L=256 energy=1.002929 grad=1.003634 mean_max=6.217e-01 left_max=1.788e-07 right_max=2.065e-07 orth_max=9.907e-07 time=5.0s
+variant=bf16_all       n=4 L=512 energy=0.999177 grad=0.999140 mean_max=6.953e-01 left_max=1.788e-07 right_max=1.788e-07 orth_max=1.052e-06 time=10.2s
+variant=bf16_all       n=8 L= 32 energy=0.999187 grad=0.999201 mean_max=1.343e-01 left_max=2.920e-07 right_max=2.666e-07 orth_max=2.805e-07 time=0.9s
+variant=bf16_all       n=8 L= 64 energy=1.000388 grad=1.000523 mean_max=1.793e-01 left_max=2.980e-07 right_max=2.920e-07 orth_max=3.022e-07 time=1.8s
+variant=bf16_all       n=8 L=128 energy=0.999641 grad=0.999308 mean_max=2.241e-01 left_max=2.980e-07 right_max=2.796e-07 orth_max=3.000e-07 time=3.5s
+variant=bf16_all       n=8 L=256 energy=0.999071 grad=0.998864 mean_max=3.502e-01 left_max=2.980e-07 right_max=3.210e-07 orth_max=2.876e-07 time=7.1s
+variant=bf16_all       n=8 L=512 energy=0.996964 grad=0.996588 mean_max=5.529e-01 left_max=3.424e-07 right_max=2.920e-07 orth_max=2.935e-07 time=14.1s
+
+=== bf16_fp32_mix ===
+variant=bf16_fp32_mix  n=4 L= 32 energy=1.000000 grad=1.000000 mean_max=4.398e-06 left_max=1.788e-07 right_max=1.686e-07 orth_max=5.872e-07 time=0.6s
+variant=bf16_fp32_mix  n=4 L= 64 energy=1.000000 grad=1.000000 mean_max=6.098e-06 left_max=2.065e-07 right_max=1.686e-07 orth_max=1.011e-06 time=1.3s
+variant=bf16_fp32_mix  n=4 L=128 energy=1.000000 grad=1.000000 mean_max=8.418e-06 left_max=1.686e-07 right_max=1.788e-07 orth_max=1.031e-06 time=2.5s
+variant=bf16_fp32_mix  n=4 L=256 energy=1.000000 grad=1.000000 mean_max=1.052e-05 left_max=1.788e-07 right_max=1.788e-07 orth_max=9.876e-07 time=5.1s
+variant=bf16_fp32_mix  n=4 L=512 energy=1.000000 grad=1.000000 mean_max=1.552e-05 left_max=1.788e-07 right_max=2.065e-07 orth_max=9.740e-07 time=10.2s
+variant=bf16_fp32_mix  n=8 L= 32 energy=1.000000 grad=1.000000 mean_max=2.785e-06 left_max=2.796e-07 right_max=2.529e-07 orth_max=2.809e-07 time=0.9s
+variant=bf16_fp32_mix  n=8 L= 64 energy=1.000000 grad=1.000000 mean_max=4.299e-06 left_max=2.920e-07 right_max=3.210e-07 orth_max=3.045e-07 time=1.7s
+variant=bf16_fp32_mix  n=8 L=128 energy=1.000000 grad=1.000000 mean_max=5.580e-06 left_max=2.980e-07 right_max=2.731e-07 orth_max=2.980e-07 time=3.5s
+variant=bf16_fp32_mix  n=8 L=256 energy=1.000000 grad=1.000000 mean_max=7.872e-06 left_max=3.210e-07 right_max=2.796e-07 orth_max=3.023e-07 time=7.0s
+variant=bf16_fp32_mix  n=8 L=512 energy=1.000000 grad=1.000000 mean_max=1.120e-05 left_max=3.154e-07 right_max=2.796e-07 orth_max=3.000e-07 time=14.0s
+
+Saved results/stage2_precision/precision_depth_suite.json and results/stage2_precision/precision_depth_suite.md
+Total time: 187.5s

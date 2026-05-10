@@ -1,0 +1,47 @@
+{
+  "timestamp": "2026-05-10T23:31:06.897244",
+  "config": {
+    "layers": [
+      16,
+      32
+    ],
+    "models": [
+      "baseline",
+      "isohc"
+    ],
+    "hidden_dim": 512,
+    "heads": 8,
+    "streams": 8,
+    "context_length": 512,
+    "steps": 2000,
+    "batch_size": 32,
+    "precision": "bf16",
+    "learning_rate": 0.0003,
+    "warmup_steps": 200,
+    "device": "cuda",
+    "output_dir": "results/stage2_real_text_grid_h512",
+    "data_path": "data/tinyshakespeare/input.txt"
+  },
+  "runs": [
+    {
+      "model": "baseline",
+      "layers": 16,
+      "passed": true,
+      "params": 67518976,
+      "final_train_loss": 0.10539029538631439,
+      "val_loss": 3.1542179703712465,
+      "max_grad_norm": 15.513985633850098,
+      "total_time_s": 299.3064560890198,
+      "max_orth_error": 0.0,
+      "max_fix_error": 0.0,
+      "status": 0,
+      "log": "results/stage2_real_text_grid_h512/baseline_L16.log"
+    },
+    {
+      "model": "baseline",
+      "layers": 32,
+      "status": 1,
+      "log": "results/stage2_real_text_grid_h512/baseline_L32.log"
+    }
+  ]
+}

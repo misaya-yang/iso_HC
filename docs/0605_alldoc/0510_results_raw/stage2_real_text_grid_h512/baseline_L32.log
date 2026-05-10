@@ -1,0 +1,23 @@
+======================================================================
+Stage 2: Real Text Byte-LM Smoke
+======================================================================
+model=baseline layers=32 params=134,644,224
+data_bytes=1,115,394 train=1,003,854 val=111,540
+batch_size=32 context=512 steps=2000
+step     1/2000 loss=5.6120 grad=15.1569 lr=0.00e+00 time=810.8ms
+Traceback (most recent call last):
+  File "/root/isoHC/experiments/stage2_real_text_smoke.py", line 242, in <module>
+    main()
+  File "/root/isoHC/experiments/stage2_real_text_smoke.py", line 238, in main
+    raise SystemExit(train(args))
+                     ^^^^^^^^^^^
+  File "/root/isoHC/experiments/stage2_real_text_smoke.py", line 105, in train
+    loss.backward()
+  File "/root/miniconda3/lib/python3.12/site-packages/torch/_tensor.py", line 647, in backward
+    torch.autograd.backward(
+  File "/root/miniconda3/lib/python3.12/site-packages/torch/autograd/__init__.py", line 354, in backward
+    _engine_run_backward(
+  File "/root/miniconda3/lib/python3.12/site-packages/torch/autograd/graph.py", line 829, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 256.00 MiB. GPU 0 has a total capacity of 31.36 GiB of which 151.69 MiB is free. Including non-PyTorch memory, this process has 31.20 GiB memory in use. Of the allocated memory 30.09 GiB is allocated by PyTorch, and 503.67 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

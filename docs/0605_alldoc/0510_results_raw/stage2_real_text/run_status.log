@@ -1,0 +1,4 @@
+RUN_STATUS model=baseline layers=16 status=0
+RUN_STATUS model=baseline layers=32 status=0
+RUN_STATUS model=isohc layers=16 status=0
+RUN_STATUS model=isohc layers=32 status=0
