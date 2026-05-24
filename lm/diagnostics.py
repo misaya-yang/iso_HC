@@ -107,6 +107,46 @@ def compute_stream_cosine(X, eps=1e-12):
     return cos_sim[mask].mean().item()
 
 
+def compute_head_output_stats(O, eps=1e-12):
+    """Compute head-output diversity metrics.
+
+    Args:
+        O: attention head outputs with shape (B, T, H, Dh).
+
+    Returns:
+        Dict with average off-diagonal cosine and effective rank of the
+        head Gram matrix.  Higher cosine means more head redundancy; higher
+        effective rank means more diverse head usage.
+    """
+    if O.ndim != 4:
+        raise ValueError(f"Expected O with shape (B, T, H, Dh), got {tuple(O.shape)}")
+
+    B, T, H, Dh = O.shape
+    if H <= 1:
+        return {
+            "head_offdiag_cosine": 1.0,
+            "head_effective_rank": 1.0,
+        }
+
+    # Head vectors: (H, B*T*Dh)
+    heads = O.permute(2, 0, 1, 3).reshape(H, -1).float()
+    heads_norm = heads / (heads.norm(dim=1, keepdim=True) + eps)
+    cos = heads_norm @ heads_norm.T
+    mask = ~torch.eye(H, dtype=torch.bool, device=O.device)
+    offdiag_cosine = cos[mask].mean()
+
+    gram = (heads @ heads.T) / max(B * T * Dh, 1)
+    eigvals = torch.linalg.eigvalsh(gram).clamp_min(0.0)
+    probs = eigvals / (eigvals.sum() + eps)
+    entropy = -(probs * torch.log(probs + eps)).sum()
+    effective_rank = torch.exp(entropy)
+
+    return {
+        "head_offdiag_cosine": offdiag_cosine.item(),
+        "head_effective_rank": effective_rank.item(),
+    }
+
+
 def compute_gradient_profile(model):
     """Compute gradient norm per layer.
 
@@ -126,8 +166,18 @@ def compute_gradient_stats_by_layer(model, num_layers):
     """
     layer_grads = []
     for l in range(num_layers):
+        patterns = (
+            f'blocks.{l}.',
+            f'mixings.{l}.',
+            f'attns.{l}.',
+            f'mlps.{l}.',
+            f'attn_norms.{l}.',
+            f'mlp_norms.{l}.',
+            f'attn_mixings.{l}.',
+            f'mlp_mixings.{l}.',
+        )
         layer_params = [p for n, p in model.named_parameters()
-                        if f'blocks.{l}.' in n or f'mixings.{l}.' in n]
+                        if any(pattern in n for pattern in patterns)]
         if layer_params:
             total_norm = sum(p.grad.norm().item() for p in layer_params
                            if p.grad is not None)

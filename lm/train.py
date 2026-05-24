@@ -9,7 +9,6 @@ import math
 import json
 import torch
 import torch.nn.functional as F
-from torch.cuda.amp import autocast, GradScaler
 
 from .diagnostics import (
     DiagnosticsCollector,
@@ -17,6 +16,7 @@ from .diagnostics import (
     compute_stream_cosine,
     compute_gradient_stats_by_layer,
     compute_activation_stats,
+    collect_hc_diagnostics,
 )
 
 
@@ -26,6 +26,15 @@ def cosine_lr_schedule(step, warmup_steps, total_steps, max_lr, min_lr):
         return max_lr * step / warmup_steps
     progress = (step - warmup_steps) / (total_steps - warmup_steps)
     return min_lr + (max_lr - min_lr) * 0.5 * (1 + math.cos(math.pi * progress))
+
+
+def amp_autocast(device, enabled=True):
+    """bf16 autocast context for CUDA; no-op on CPU unless explicitly useful."""
+    return torch.amp.autocast(
+        device_type=device.type,
+        dtype=torch.bfloat16,
+        enabled=enabled and device.type == "cuda",
+    )
 
 
 def train_epoch(model, dataloader, optimizer, device,
@@ -58,8 +67,6 @@ def train_epoch(model, dataloader, optimizer, device,
         dict of training metrics
     """
     model.train()
-    scaler = GradScaler() if use_amp else None
-
     total_loss = 0.0
     total_tokens = 0
     step = 0
@@ -79,7 +86,7 @@ def train_epoch(model, dataloader, optimizer, device,
 
         # Forward
         if use_amp:
-            with autocast(dtype=torch.bfloat16):
+            with amp_autocast(device, enabled=True):
                 logits, loss = model(x, y)
         else:
             logits, loss = model(x, y)
@@ -93,17 +100,10 @@ def train_epoch(model, dataloader, optimizer, device,
             continue
 
         # Backward
-        optimizer.zero_grad()
-        if use_amp:
-            scaler.scale(loss).backward()
-            scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-            scaler.step(optimizer)
-            scaler.update()
-        else:
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-            optimizer.step()
+        optimizer.zero_grad(set_to_none=True)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+        optimizer.step()
 
         # Statistics
         batch_loss = loss.item()
@@ -125,6 +125,13 @@ def train_epoch(model, dataloader, optimizer, device,
             if diagnostics.should_collect():
                 act_stats = compute_activation_stats(logits)
                 diagnostics.record(**act_stats)
+                grad_stats = compute_gradient_stats_by_layer(
+                    model, getattr(model, 'num_layers', 0)
+                )
+                diagnostics.record(**grad_stats)
+                diagnostics.record_dict('hc', collect_hc_diagnostics(model))
+                if hasattr(model, 'get_headmix_diagnostics'):
+                    diagnostics.record_dict('headmix', model.get_headmix_diagnostics())
 
         # Logging
         if step % 100 == 0:
@@ -193,7 +200,7 @@ def evaluate(model, dataloader, device, use_amp=True, max_batches=None):
         y = y.to(device, non_blocking=True)
 
         if use_amp:
-            with autocast(dtype=torch.bfloat16):
+            with amp_autocast(device, enabled=True):
                 logits, loss = model(x, y)
         else:
             logits, loss = model(x, y)
@@ -249,14 +256,21 @@ def run_experiment(model, train_loader, val_loader, config, device):
         dict of results
     """
     os.makedirs(config['save_dir'], exist_ok=True)
+    raw_model = model
 
     # Optimizer
-    optimizer = torch.optim.AdamW(
-        model.parameters(),
-        lr=config['max_lr'],
-        betas=(config.get('beta1', 0.9), config.get('beta2', 0.95)),
-        weight_decay=config.get('weight_decay', 0.1),
-    )
+    optimizer_kwargs = {
+        'lr': config['max_lr'],
+        'betas': (config.get('beta1', 0.9), config.get('beta2', 0.95)),
+        'weight_decay': config.get('weight_decay', 0.1),
+    }
+    if device.type == 'cuda':
+        optimizer_kwargs['fused'] = config.get('fused_adamw', True)
+    try:
+        optimizer = torch.optim.AdamW(raw_model.parameters(), **optimizer_kwargs)
+    except TypeError:
+        optimizer_kwargs.pop('fused', None)
+        optimizer = torch.optim.AdamW(raw_model.parameters(), **optimizer_kwargs)
 
     # Diagnostics
     diagnostics = DiagnosticsCollector(
@@ -277,8 +291,18 @@ def run_experiment(model, train_loader, val_loader, config, device):
     print(f"  Total steps: {total_tokens // tokens_per_step}")
     print(f"  Warmup steps: {warmup_steps}")
     print(f"  Eval every: {eval_every_steps} steps")
-    print(f"  Model params: {model.count_parameters()/1e6:.1f}M")
+    print(f"  Model params: {raw_model.count_parameters()/1e6:.1f}M")
     print(f"  Device: {device}")
+
+    train_model = raw_model
+    if config.get('use_compile', False):
+        compile_kwargs = {
+            'mode': config.get('compile_mode', 'max-autotune'),
+            'fullgraph': config.get('compile_fullgraph', False),
+            'dynamic': config.get('compile_dynamic', False),
+        }
+        print(f"  torch.compile: {compile_kwargs}")
+        train_model = torch.compile(raw_model, **compile_kwargs)
 
     # Eval function
     def eval_fn(m):
@@ -291,7 +315,7 @@ def run_experiment(model, train_loader, val_loader, config, device):
     all_metrics = []
     while diagnostics.step_count * tokens_per_step < total_tokens:
         metrics = train_epoch(
-            model, train_loader, optimizer, device,
+            train_model, train_loader, optimizer, device,
             epoch=epoch,
             total_tokens_target=total_tokens,
             tokens_per_step=tokens_per_step,
@@ -313,8 +337,9 @@ def run_experiment(model, train_loader, val_loader, config, device):
             break
 
     # Final eval
-    final_eval = evaluate(model, val_loader, device,
-                         use_amp=config.get('use_amp', True))
+    final_eval = evaluate(train_model, val_loader, device,
+                         use_amp=config.get('use_amp', True),
+                         max_batches=config.get('eval_max_batches', None))
     print(f"\nFinal: val_loss={final_eval['val_loss']:.4f}, "
           f"val_ppl={final_eval['val_ppl']:.2f}")
 

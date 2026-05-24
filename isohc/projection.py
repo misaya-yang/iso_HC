@@ -49,12 +49,14 @@ def newton_schulz_polar(A, steps=10):
     Given A (..., m, m), returns R_K ≈ polar(A) where A = R P.
 
     The iteration:
-      X_0 = A / ||A||_2
+      X_0 = A / ||A||_F
       X_{k+1} = X_k (3I - X_k^T X_k) / 2
 
     For matrices near-orthogonal (e.g., initialized from identity),
     this converges very quickly. The backward pass is fully
     differentiable and numerically stable.
+    Frobenius scaling avoids SVD-backed spectral norm calls, which are
+    incompatible with CUDA graph capture under torch.compile.
 
     Args:
         A: (..., m, m) matrix
@@ -64,7 +66,7 @@ def newton_schulz_polar(A, steps=10):
         R: (..., m, m) approximately orthogonal factor
     """
     if A.dim() == 2:
-        norm = torch.linalg.matrix_norm(A, ord=2)
+        norm = torch.linalg.matrix_norm(A, ord='fro')
         X = A / (norm + 1e-8)
         for _ in range(steps):
             XTX = X.T @ X
@@ -72,7 +74,7 @@ def newton_schulz_polar(A, steps=10):
         return X
     else:
         # Batch mode
-        norm = torch.linalg.matrix_norm(A, ord=2, dim=(-2, -1), keepdim=True)
+        norm = torch.linalg.matrix_norm(A, ord='fro', dim=(-2, -1), keepdim=True)
         X = A / (norm + 1e-8)
         I = torch.eye(X.shape[-1], device=X.device, dtype=X.dtype)
         for _ in range(steps):

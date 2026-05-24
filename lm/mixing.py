@@ -35,12 +35,12 @@ class StreamMixing(nn.Module):
 class IdentityMixing(StreamMixing):
     """Identity mixing: H = I."""
 
+    def __init__(self, n_streams):
+        super().__init__(n_streams)
+        self.register_buffer("eye", torch.eye(n_streams, dtype=torch.float32))
+
     def forward(self):
-        return torch.eye(
-            self.n_streams,
-            device=next(self.parameters()).device if list(self.parameters()) else 'cpu',
-            dtype=torch.float32
-        )
+        return self.eye
 
     def get_diagnostics(self):
         return {'orth_error': 0.0, 'fix_error': 0.0}

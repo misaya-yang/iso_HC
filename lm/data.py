@@ -13,6 +13,17 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 
 
+def load_token_cache(cache_path):
+    """Load token cache with mmap when supported to reduce CPU RAM pressure."""
+    try:
+        token_ids = torch.load(cache_path, map_location='cpu', mmap=True)
+    except TypeError:
+        token_ids = torch.load(cache_path, map_location='cpu')
+    if isinstance(token_ids, dict):
+        token_ids = token_ids['token_ids']
+    return token_ids
+
+
 def get_tokenizer(vocab_size=50257):
     """Get a GPT-2 tokenizer (ByteLevelBPE)."""
     try:
@@ -43,9 +54,33 @@ class TokenizedTextDataset(Dataset):
 
     def __getitem__(self, idx):
         chunk = self.token_ids[idx:idx + self.context_length + 1]
-        x = chunk[:-1]
-        y = chunk[1:]
+        x = chunk[:-1].long()
+        y = chunk[1:].long()
         return x, y
+
+
+class RandomTokenDataset(Dataset):
+    """Deterministic random-token dataset for offline smoke tests."""
+
+    def __init__(self, vocab_size, context_length, length=1024, seed=1234):
+        self.vocab_size = vocab_size
+        self.context_length = context_length
+        self.length = length
+        generator = torch.Generator().manual_seed(seed)
+        self.tokens = torch.randint(
+            0,
+            vocab_size,
+            (length + context_length + 1,),
+            generator=generator,
+            dtype=torch.long,
+        )
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, idx):
+        chunk = self.tokens[idx:idx + self.context_length + 1]
+        return chunk[:-1], chunk[1:]
 
 
 class HuggingFaceDataset(Dataset):
@@ -131,8 +166,58 @@ class TinyStoriesDataset(Dataset):
         return x, y
 
 
+def create_dataset(dataset_name, tokenizer, context_length, split='train',
+                   max_samples=None, cache_path=None):
+    """Create a dataset, optionally loading pre-tokenized token IDs."""
+    if cache_path is not None and os.path.exists(cache_path):
+        token_ids = load_token_cache(cache_path)
+        return TokenizedTextDataset(token_ids, context_length)
+
+    if dataset_name == 'random':
+        vocab_size = getattr(tokenizer, 'vocab_size', 50304)
+        return RandomTokenDataset(
+            vocab_size=vocab_size,
+            context_length=context_length,
+            length=max_samples or 4096,
+            seed=42 if split == 'train' else 43,
+        )
+    elif dataset_name == 'tinystories':
+        return TinyStoriesDataset(tokenizer, context_length, split=split,
+                                  max_samples=max_samples)
+    elif dataset_name == 'wikitext-103':
+        return HuggingFaceDataset('wikitext', split, 'text', tokenizer,
+                                  context_length, max_samples=max_samples)
+    else:
+        return HuggingFaceDataset(dataset_name, split, 'text', tokenizer,
+                                  context_length, max_samples=max_samples)
+
+
+def save_token_cache(dataset_name, tokenizer, cache_path, context_length=1024,
+                     split='train', max_samples=None):
+    """Create and save a token cache for fast future dataloader startup."""
+    dataset = create_dataset(
+        dataset_name=dataset_name,
+        tokenizer=tokenizer,
+        context_length=context_length,
+        split=split,
+        max_samples=max_samples,
+        cache_path=None,
+    )
+    token_ids = getattr(dataset, 'token_ids', None)
+    if token_ids is None:
+        token_ids = getattr(dataset, 'tokens', None)
+    if token_ids is None:
+        raise ValueError(f"Dataset {dataset_name} does not expose token IDs")
+
+    os.makedirs(os.path.dirname(cache_path) or '.', exist_ok=True)
+    torch.save(token_ids.cpu().long(), cache_path)
+    print(f"Saved {len(token_ids)} tokens to {cache_path}")
+    return cache_path
+
+
 def create_dataloader(dataset_name, tokenizer, context_length, batch_size,
-                      split='train', max_samples=None, num_workers=0):
+                      split='train', max_samples=None, num_workers=0,
+                      cache_path=None):
     """Create a dataloader for the specified dataset.
 
     Args:
@@ -144,16 +229,14 @@ def create_dataloader(dataset_name, tokenizer, context_length, batch_size,
         max_samples: max number of samples to load (for debugging)
         num_workers: dataloader workers
     """
-    if dataset_name == 'tinystories':
-        dataset = TinyStoriesDataset(tokenizer, context_length, split=split,
-                                     max_samples=max_samples)
-    elif dataset_name == 'wikitext-103':
-        dataset = HuggingFaceDataset('wikitext', split, 'text', tokenizer,
-                                     context_length, max_samples=max_samples)
-    else:
-        # Generic HuggingFace dataset
-        dataset = HuggingFaceDataset(dataset_name, split, 'text', tokenizer,
-                                     context_length, max_samples=max_samples)
+    dataset = create_dataset(
+        dataset_name=dataset_name,
+        tokenizer=tokenizer,
+        context_length=context_length,
+        split=split,
+        max_samples=max_samples,
+        cache_path=cache_path,
+    )
 
     loader = DataLoader(
         dataset,
@@ -167,12 +250,11 @@ def create_dataloader(dataset_name, tokenizer, context_length, batch_size,
 
 def save_tokenized_cache(dataset_name, tokenizer, cache_path, max_samples=None):
     """Pre-tokenize and cache a dataset to disk."""
-    if dataset_name == 'tinystories':
-        ds = TinyStoriesDataset(tokenizer, context_length=1024, max_samples=max_samples)
-    else:
-        raise ValueError(f"Cache not supported for {dataset_name}")
-
-    os.makedirs(os.path.dirname(cache_path) or '.', exist_ok=True)
-    torch.save(ds.token_ids, cache_path)
-    print(f"Saved {len(ds.token_ids)} tokens to {cache_path}")
-    return cache_path
+    return save_token_cache(
+        dataset_name=dataset_name,
+        tokenizer=tokenizer,
+        cache_path=cache_path,
+        context_length=1024,
+        split='train',
+        max_samples=max_samples,
+    )
