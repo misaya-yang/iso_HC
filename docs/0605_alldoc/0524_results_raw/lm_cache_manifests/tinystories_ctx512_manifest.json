@@ -1,0 +1,8 @@
+{
+  "dataset": "tinystories",
+  "context_length": 512,
+  "train_cache_path": "/Users/yang/projects/isoHC/data/lm_cache/tinystories_train_ctx512.pt",
+  "val_cache_path": "/Users/yang/projects/isoHC/data/lm_cache/tinystories_validation_ctx512.pt",
+  "vocab_size": 50257,
+  "storage_note": "Token caches are self-contained; remote training does not need HuggingFace network access when cache paths are supplied."
+}

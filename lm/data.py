@@ -217,7 +217,8 @@ def save_token_cache(dataset_name, tokenizer, cache_path, context_length=1024,
 
 def create_dataloader(dataset_name, tokenizer, context_length, batch_size,
                       split='train', max_samples=None, num_workers=0,
-                      cache_path=None):
+                      cache_path=None, prefetch_factor=4,
+                      persistent_workers=True, drop_last=True):
     """Create a dataloader for the specified dataset.
 
     Args:
@@ -238,13 +239,18 @@ def create_dataloader(dataset_name, tokenizer, context_length, batch_size,
         cache_path=cache_path,
     )
 
-    loader = DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=(split == 'train'),
-        num_workers=num_workers,
-        pin_memory=True,
-    )
+    loader_kwargs = {
+        "batch_size": batch_size,
+        "shuffle": (split == 'train'),
+        "num_workers": num_workers,
+        "pin_memory": True,
+        "drop_last": drop_last,
+    }
+    if num_workers > 0:
+        loader_kwargs["prefetch_factor"] = prefetch_factor
+        loader_kwargs["persistent_workers"] = persistent_workers
+
+    loader = DataLoader(dataset, **loader_kwargs)
     return loader, dataset
 
 

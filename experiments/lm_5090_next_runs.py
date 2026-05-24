@@ -55,6 +55,24 @@ PRESETS = {
         "total_tokens": 20_000_000,
         "batch_size": 32,
     },
+    "fe-deep-36l-512": {
+        "num_layers": 36,
+        "d_model": 512,
+        "num_heads": 8,
+        "context_length": 512,
+        "n_streams": 4,
+        "total_tokens": 30_000_000,
+        "batch_size": 8,
+    },
+    "fe-deep-48l-512": {
+        "num_layers": 48,
+        "d_model": 512,
+        "num_heads": 8,
+        "context_length": 512,
+        "n_streams": 4,
+        "total_tokens": 20_000_000,
+        "batch_size": 4,
+    },
     "125m-smoke": {
         "num_layers": 12,
         "d_model": 768,
@@ -131,6 +149,8 @@ def build_preset_configs(
             "eval_every_tokens": max(262_144, base["total_tokens"] // 5),
             "diagnostics_every": 50,
             "eval_max_batches": 20,
+            "grad_accum_steps": 1,
+            "save_checkpoints": True,
             "save_dir": os.path.join(output_dir, f"{preset}_{method}_seed{seed}"),
         }
         configs.append(cfg)
@@ -246,6 +266,24 @@ def autotune_batch_size(config, tokenizer, device, memory_target_gb=30.0):
     return best_batch, best_mem
 
 
+def autotune_common_fair_batch(configs, vocab_size, device, memory_target_gb=29.0):
+    """Probe every method and choose one common batch for a fair sweep."""
+    tokenizer = SimpleNamespace(vocab_size=vocab_size)
+    probe = {}
+    selected_batches = []
+
+    for cfg in configs:
+        batch, mem_gb = autotune_batch_size(cfg, tokenizer, device, memory_target_gb)
+        probe[cfg["method"]] = {
+            "max_fitting_batch": batch,
+            "probe_peak_gb": mem_gb,
+        }
+        selected_batches.append(batch)
+
+    common_batch = min(selected_batches) if selected_batches else None
+    return common_batch, probe
+
+
 def collect_posthoc_diagnostics(model, val_loader, device):
     """Collect stream diagnostics after training without storing giant tensors."""
     result = {}
@@ -317,6 +355,9 @@ def run_single(config, auto_batch=False, memory_target_gb=30.0):
         max_samples=config.get("max_samples"),
         cache_path=config.get("train_cache_path"),
         num_workers=config.get("num_workers", 2),
+        prefetch_factor=config.get("prefetch_factor", 4),
+        persistent_workers=config.get("persistent_workers", True),
+        drop_last=True,
     )
     val_loader, _ = create_dataloader(
         config["dataset"],
@@ -327,6 +368,9 @@ def run_single(config, auto_batch=False, memory_target_gb=30.0):
         max_samples=config.get("max_samples_val"),
         cache_path=config.get("val_cache_path"),
         num_workers=config.get("num_workers", 2),
+        prefetch_factor=config.get("prefetch_factor", 4),
+        persistent_workers=config.get("persistent_workers", True),
+        drop_last=False,
     )
 
     model = create_model(config, tokenizer.vocab_size, device)
@@ -350,6 +394,8 @@ def run_single(config, auto_batch=False, memory_target_gb=30.0):
         "beta1": config["beta1"],
         "beta2": config["beta2"],
         "eval_max_batches": config["eval_max_batches"],
+        "grad_accum_steps": config.get("grad_accum_steps", 1),
+        "save_checkpoints": config.get("save_checkpoints", True),
         "use_compile": config["use_compile"],
         "compile_mode": config["compile_mode"],
         "compile_fullgraph": config["compile_fullgraph"],
@@ -399,8 +445,16 @@ def main():
     parser.add_argument("--compile_mode", default="max-autotune",
                         choices=["default", "reduce-overhead", "max-autotune"])
     parser.add_argument("--auto_batch", action="store_true")
+    parser.add_argument("--fair_auto_batch", action="store_true",
+                        help="Probe all methods and run one common largest-fitting batch.")
     parser.add_argument("--memory_target_gb", type=float, default=30.0)
     parser.add_argument("--num_workers", type=int, default=2)
+    parser.add_argument("--prefetch_factor", type=int, default=4)
+    parser.add_argument("--grad_accum_steps", type=int, default=1)
+    parser.add_argument("--no_save_checkpoints", dest="save_checkpoints",
+                        action="store_false", default=True)
+    parser.add_argument("--require_cuda", action="store_true",
+                        help="Abort instead of accidentally launching a CPU run.")
     parser.add_argument("--max_samples", type=int, default=None)
     parser.add_argument("--max_samples_val", type=int, default=None)
     parser.add_argument("--train_cache_path", type=str, default=None)
@@ -408,10 +462,15 @@ def main():
     parser.add_argument("--vocab_size", type=int, default=50257)
     args = parser.parse_args()
 
+    if args.require_cuda and not torch.cuda.is_available():
+        raise RuntimeError("--require_cuda was set, but CUDA is not available.")
+
     default_methods = {
         "run0": ["baseline", "unconstrained", "mhc", "isohc"],
         "deep-stress": ["baseline", "unconstrained", "mhc", "isohc"],
         "deep-stress-512": ["baseline", "unconstrained", "mhc", "isohc"],
+        "fe-deep-36l-512": ["baseline", "unconstrained", "mhc", "isohc"],
+        "fe-deep-48l-512": ["baseline", "unconstrained", "mhc", "isohc"],
         "125m-smoke": ["mhc", "isohc"],
         "headmix": [
             "baseline",
@@ -435,11 +494,39 @@ def main():
     )
     for cfg in configs:
         cfg["num_workers"] = args.num_workers
+        cfg["prefetch_factor"] = args.prefetch_factor
+        cfg["grad_accum_steps"] = args.grad_accum_steps
+        cfg["save_checkpoints"] = args.save_checkpoints
         cfg["max_samples"] = args.max_samples
         cfg["max_samples_val"] = args.max_samples_val
         cfg["train_cache_path"] = args.train_cache_path
         cfg["val_cache_path"] = args.val_cache_path
         cfg["vocab_size"] = args.vocab_size
+
+    if args.auto_batch and args.fair_auto_batch:
+        raise ValueError("Use either --auto_batch or --fair_auto_batch, not both.")
+
+    fair_probe = None
+    if args.fair_auto_batch:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if device.type == "cuda":
+            torch.set_float32_matmul_precision("high")
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+        common_batch, fair_probe = autotune_common_fair_batch(
+            configs,
+            args.vocab_size,
+            device,
+            args.memory_target_gb,
+        )
+        if common_batch is not None:
+            print(f"Fair auto batch selected common batch={common_batch}")
+            for method, stats in fair_probe.items():
+                print(f"  {method}: max_batch={stats['max_fitting_batch']} "
+                      f"peak={stats['probe_peak_gb']:.2f}GB")
+            for cfg in configs:
+                cfg["batch_size"] = common_batch
+                cfg["fair_auto_batch_probe"] = fair_probe
 
     summaries = []
     for cfg in configs:
@@ -454,6 +541,9 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
     with open(os.path.join(args.output_dir, f"{args.preset}_summary.json"), "w") as f:
         json.dump(summaries, f, indent=2, default=str)
+    if fair_probe is not None:
+        with open(os.path.join(args.output_dir, f"{args.preset}_fair_batch_probe.json"), "w") as f:
+            json.dump(fair_probe, f, indent=2, default=str)
 
 
 if __name__ == "__main__":

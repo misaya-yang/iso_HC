@@ -1,0 +1,13 @@
+{
+  "dataset": "HuggingFaceFW/fineweb-edu",
+  "dataset_config": "sample-10BT",
+  "text_key": "text",
+  "context_length": 512,
+  "train_split": "train",
+  "val_split": "train_heldout",
+  "val_after_train": true,
+  "train_cache_path": "/tmp/isohc_fineweb_edu_100m_0524/HuggingFaceFW__fineweb-edu__sample-10BT_train_ctx512.pt",
+  "val_cache_path": "/tmp/isohc_fineweb_edu_100m_0524/HuggingFaceFW__fineweb-edu__sample-10BT_train_heldout_ctx512.pt",
+  "vocab_size": 50257,
+  "storage_note": "Token caches are self-contained; remote training does not need HuggingFace network access when cache paths are supplied."
+}

@@ -4,12 +4,14 @@ import tempfile
 import unittest
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 from lm.diagnostics import compute_head_output_stats
 from lm.data import create_dataloader, save_token_cache, TokenizedTextDataset
 from lm.headmix import HeadOutputMixing
 from lm.models import CausalSelfAttention, TwoBranchHCTransformer
+from lm.train import run_experiment
 from experiments.lm_5090_next_runs import build_preset_configs
 
 
@@ -193,6 +195,88 @@ class LMNextPhaseContractTests(unittest.TestCase):
         self.assertTrue(all(c["num_layers"] == 12 for c in smoke))
         self.assertTrue(all(c["d_model"] == 768 for c in smoke))
         self.assertTrue(all(c["num_heads"] == 12 for c in smoke))
+
+        fe_deep = build_preset_configs(
+            preset="fe-deep-36l-512",
+            methods=["baseline", "mhc", "isohc"],
+            output_dir="outputs/test",
+        )
+        self.assertTrue(all(c["num_layers"] == 36 for c in fe_deep))
+        self.assertTrue(all(c["d_model"] == 512 for c in fe_deep))
+        self.assertTrue(all(c["context_length"] == 512 for c in fe_deep))
+        self.assertTrue(all(c["batch_size"] == 8 for c in fe_deep))
+
+    def test_run_experiment_respects_gradient_accumulation_steps(self):
+        class TinyLM(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.num_layers = 1
+                self.embedding = nn.Embedding(32, 8)
+                self.proj = nn.Linear(8, 32)
+
+            def forward(self, x, y=None):
+                logits = self.proj(self.embedding(x))
+                loss = None
+                if y is not None:
+                    loss = F.cross_entropy(
+                        logits.reshape(-1, logits.size(-1)),
+                        y.reshape(-1),
+                    )
+                return logits, loss
+
+            def count_parameters(self):
+                return sum(p.numel() for p in self.parameters())
+
+        class DummyTokenizer:
+            vocab_size = 32
+
+        loader, _ = create_dataloader(
+            "random",
+            DummyTokenizer(),
+            context_length=8,
+            batch_size=2,
+            split="train",
+            max_samples=16,
+            num_workers=0,
+        )
+        val_loader, _ = create_dataloader(
+            "random",
+            DummyTokenizer(),
+            context_length=8,
+            batch_size=2,
+            split="validation",
+            max_samples=8,
+            num_workers=0,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            results = run_experiment(
+                TinyLM(),
+                loader,
+                val_loader,
+                {
+                    "total_tokens": 64,
+                    "max_lr": 1e-3,
+                    "min_lr": 1e-4,
+                    "warmup_tokens": 0,
+                    "grad_clip": 1.0,
+                    "use_amp": False,
+                    "eval_every_tokens": 64,
+                    "save_dir": tmpdir,
+                    "diagnostics_every": 1,
+                    "weight_decay": 0.0,
+                    "beta1": 0.9,
+                    "beta2": 0.95,
+                    "eval_max_batches": 1,
+                    "grad_accum_steps": 2,
+                    "save_checkpoints": False,
+                    "use_compile": False,
+                },
+                torch.device("cpu"),
+            )
+
+        self.assertEqual(results["train_metrics"][0]["steps"], 2)
+        self.assertEqual(results["train_metrics"][0]["total_tokens"], 64)
 
 
 if __name__ == "__main__":

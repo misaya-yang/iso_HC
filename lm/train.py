@@ -22,8 +22,10 @@ from .diagnostics import (
 
 def cosine_lr_schedule(step, warmup_steps, total_steps, max_lr, min_lr):
     """Cosine learning rate schedule with warmup."""
-    if step < warmup_steps:
-        return max_lr * step / warmup_steps
+    if warmup_steps > 0 and step < warmup_steps:
+        return max_lr * (step + 1) / warmup_steps
+    if total_steps <= warmup_steps:
+        return min_lr
     progress = (step - warmup_steps) / (total_steps - warmup_steps)
     return min_lr + (max_lr - min_lr) * 0.5 * (1 + math.cos(math.pi * progress))
 
@@ -42,7 +44,9 @@ def train_epoch(model, dataloader, optimizer, device,
                 warmup_steps, max_lr, min_lr,
                 grad_clip=1.0, use_amp=True,
                 diagnostics=None, eval_every_steps=None,
-                eval_fn=None, save_dir=None):
+                eval_fn=None, save_dir=None,
+                grad_accum_steps=1,
+                save_checkpoints=True):
     """Train for one epoch (or until token budget exhausted).
 
     Args:
@@ -73,16 +77,25 @@ def train_epoch(model, dataloader, optimizer, device,
     start_time = time.time()
     best_val_loss = float('inf')
 
+    optimizer.zero_grad(set_to_none=True)
+    accum_loss = 0.0
+    accum_micro_steps = 0
+    total_steps_target = max(1, math.ceil(total_tokens_target / max(tokens_per_step, 1)))
+
     for batch_idx, (x, y) in enumerate(dataloader):
+        if accum_micro_steps == 0:
+            lr = cosine_lr_schedule(
+                step,
+                warmup_steps,
+                total_steps_target,
+                max_lr,
+                min_lr,
+            )
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = lr
+
         x = x.to(device, non_blocking=True)
         y = y.to(device, non_blocking=True)
-
-        # LR schedule
-        lr = cosine_lr_schedule(step, warmup_steps,
-                                total_tokens_target // tokens_per_step,
-                                max_lr, min_lr)
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = lr
 
         # Forward
         if use_amp:
@@ -97,20 +110,35 @@ def train_epoch(model, dataloader, optimizer, device,
         # Check for NaN/Inf
         if not torch.isfinite(loss):
             print(f"WARNING: non-finite loss at step {step}: {loss.item()}")
+            optimizer.zero_grad(set_to_none=True)
+            accum_loss = 0.0
+            accum_micro_steps = 0
             continue
 
         # Backward
-        optimizer.zero_grad(set_to_none=True)
-        loss.backward()
+        (loss / grad_accum_steps).backward()
+        accum_loss += loss.item()
+        accum_micro_steps += 1
+
+        batch_tokens = x.numel()
+        total_tokens += batch_tokens
+
+        should_step = (
+            accum_micro_steps >= grad_accum_steps
+            or total_tokens >= total_tokens_target
+        )
+        if not should_step:
+            continue
+
         torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
         optimizer.step()
 
         # Statistics
-        batch_loss = loss.item()
-        batch_tokens = x.numel()
+        batch_loss = accum_loss / max(accum_micro_steps, 1)
         total_loss += batch_loss
-        total_tokens += batch_tokens
         step += 1
+        accum_loss = 0.0
+        accum_micro_steps = 0
 
         # Diagnostics
         if diagnostics is not None:
@@ -154,7 +182,7 @@ def train_epoch(model, dataloader, optimizer, device,
                 diagnostics.record(**val_metrics)
 
             # Save best
-            if val_loss < best_val_loss and save_dir:
+            if val_loss < best_val_loss and save_dir and save_checkpoints:
                 best_val_loss = val_loss
                 torch.save({
                     'step': step,
@@ -166,6 +194,7 @@ def train_epoch(model, dataloader, optimizer, device,
             model.train()
 
         # Token budget check
+        optimizer.zero_grad(set_to_none=True)
         if total_tokens >= total_tokens_target:
             break
 
@@ -281,14 +310,18 @@ def run_experiment(model, train_loader, val_loader, config, device):
     total_tokens = config['total_tokens']
     batch_size = train_loader.batch_size
     context_length = train_loader.dataset.context_length
-    tokens_per_step = batch_size * context_length
+    grad_accum_steps = max(1, int(config.get('grad_accum_steps', 1)))
+    micro_tokens_per_step = batch_size * context_length
+    tokens_per_step = micro_tokens_per_step * grad_accum_steps
     warmup_steps = config.get('warmup_tokens', 0) // tokens_per_step
-    eval_every_steps = config.get('eval_every_tokens', total_tokens // 10) // tokens_per_step
+    eval_every_steps = max(1, config.get('eval_every_tokens', total_tokens // 10) // tokens_per_step)
 
     print(f"Training config:")
     print(f"  Total tokens: {total_tokens/1e6:.1f}M")
-    print(f"  Tokens/step: {tokens_per_step}")
-    print(f"  Total steps: {total_tokens // tokens_per_step}")
+    print(f"  Micro tokens/step: {micro_tokens_per_step}")
+    print(f"  Grad accumulation: {grad_accum_steps}")
+    print(f"  Optimizer tokens/step: {tokens_per_step}")
+    print(f"  Total optimizer steps: {math.ceil(total_tokens / tokens_per_step)}")
     print(f"  Warmup steps: {warmup_steps}")
     print(f"  Eval every: {eval_every_steps} steps")
     print(f"  Model params: {raw_model.count_parameters()/1e6:.1f}M")
@@ -328,6 +361,8 @@ def run_experiment(model, train_loader, val_loader, config, device):
             eval_every_steps=eval_every_steps,
             eval_fn=eval_fn,
             save_dir=config['save_dir'],
+            grad_accum_steps=grad_accum_steps,
+            save_checkpoints=config.get('save_checkpoints', True),
         )
         all_metrics.append(metrics)
         epoch += 1
@@ -343,15 +378,17 @@ def run_experiment(model, train_loader, val_loader, config, device):
     print(f"\nFinal: val_loss={final_eval['val_loss']:.4f}, "
           f"val_ppl={final_eval['val_ppl']:.2f}")
 
-    # Save final
-    torch.save({
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'config': config,
-        'final_eval': final_eval,
-        'diagnostics': dict(diagnostics.history),
-        'train_metrics': all_metrics,
-    }, os.path.join(config['save_dir'], 'final.pt'))
+    # Save final checkpoint only when explicitly useful. Large FE sweeps can
+    # spend more time writing weights than collecting mechanism evidence.
+    if config.get('save_checkpoints', True):
+        torch.save({
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'config': config,
+            'final_eval': final_eval,
+            'diagnostics': dict(diagnostics.history),
+            'train_metrics': all_metrics,
+        }, os.path.join(config['save_dir'], 'final.pt'))
 
     # Save diagnostics summary
     summary = diagnostics.get_summary()

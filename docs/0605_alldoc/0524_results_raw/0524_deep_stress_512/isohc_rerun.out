@@ -1,0 +1,52 @@
+================================================================================
+deep-stress-512 / isohc / seed=0
+params=101.52M batch=12 T=512 tokens=20.0M
+================================================================================
+Training config:
+  Total tokens: 20.0M
+  Tokens/step: 6144
+  Total steps: 3255
+  Warmup steps: 325
+  Eval every: 651 steps
+  Model params: 101.5M
+  Device: cuda
+  torch.compile: {'mode': 'max-autotune', 'fullgraph': False, 'dynamic': False}
+  step   100 | loss 8.6511 | ppl 5716.20 | lr 9.14e-05 | tok/s 10133 | 0.6M tokens
+  step   200 | loss 6.8682 | ppl 961.21 | lr 1.84e-04 | tok/s 18228 | 1.2M tokens
+  step   300 | loss 5.9800 | ppl 395.43 | lr 2.76e-04 | tok/s 24847 | 1.8M tokens
+  step   400 | loss 5.4545 | ppl 233.81 | lr 3.00e-04 | tok/s 30348 | 2.5M tokens
+  step   500 | loss 5.0885 | ppl 162.14 | lr 2.98e-04 | tok/s 35005 | 3.1M tokens
+  step   600 | loss 4.8132 | ppl 123.12 | lr 2.94e-04 | tok/s 38989 | 3.7M tokens
+  [EVAL] step 651 | val_loss 3.5484 | val_ppl 34.76
+  step   700 | loss 4.5929 | ppl 98.78 | lr 2.89e-04 | tok/s 38832 | 4.3M tokens
+  step   800 | loss 4.4111 | ppl 82.36 | lr 2.83e-04 | tok/s 41810 | 4.9M tokens
+  step   900 | loss 4.2562 | ppl 70.54 | lr 2.75e-04 | tok/s 44467 | 5.5M tokens
+  step  1000 | loss 4.1256 | ppl 61.91 | lr 2.66e-04 | tok/s 46847 | 6.1M tokens
+  step  1100 | loss 4.0119 | ppl 55.25 | lr 2.56e-04 | tok/s 48978 | 6.8M tokens
+  step  1200 | loss 3.9104 | ppl 49.92 | lr 2.45e-04 | tok/s 50905 | 7.4M tokens
+  step  1300 | loss 3.8200 | ppl 45.60 | lr 2.33e-04 | tok/s 52649 | 8.0M tokens
+  [EVAL] step 1302 | val_loss 2.8891 | val_ppl 17.98
+  step  1400 | loss 3.7360 | ppl 41.93 | lr 2.20e-04 | tok/s 53281 | 8.6M tokens
+  step  1500 | loss 3.6630 | ppl 38.98 | lr 2.06e-04 | tok/s 54779 | 9.2M tokens
+  step  1600 | loss 3.5938 | ppl 36.37 | lr 1.92e-04 | tok/s 56163 | 9.8M tokens
+  step  1700 | loss 3.5296 | ppl 34.11 | lr 1.78e-04 | tok/s 57440 | 10.4M tokens
+  step  1800 | loss 3.4715 | ppl 32.18 | lr 1.64e-04 | tok/s 58630 | 11.1M tokens
+  step  1900 | loss 3.4174 | ppl 30.49 | lr 1.49e-04 | tok/s 59734 | 11.7M tokens
+  [EVAL] step 1953 | val_loss 2.5371 | val_ppl 12.64
+  step  2000 | loss 3.3663 | ppl 28.97 | lr 1.35e-04 | tok/s 59889 | 12.3M tokens
+  step  2100 | loss 3.3187 | ppl 27.62 | lr 1.21e-04 | tok/s 60866 | 12.9M tokens
+  step  2200 | loss 3.2745 | ppl 26.43 | lr 1.08e-04 | tok/s 61781 | 13.5M tokens
+  step  2300 | loss 3.2333 | ppl 25.36 | lr 9.49e-05 | tok/s 62642 | 14.1M tokens
+  step  2400 | loss 3.1940 | ppl 24.39 | lr 8.30e-05 | tok/s 63448 | 14.7M tokens
+  step  2500 | loss 3.1563 | ppl 23.48 | lr 7.20e-05 | tok/s 64216 | 15.4M tokens
+  step  2600 | loss 3.1209 | ppl 22.67 | lr 6.20e-05 | tok/s 64936 | 16.0M tokens
+  [EVAL] step 2604 | val_loss 2.3523 | val_ppl 10.51
+  step  2700 | loss 3.0875 | ppl 21.92 | lr 5.33e-05 | tok/s 65138 | 16.6M tokens
+  step  2800 | loss 3.0559 | ppl 21.24 | lr 4.58e-05 | tok/s 65786 | 17.2M tokens
+  step  2900 | loss 3.0260 | ppl 20.61 | lr 3.97e-05 | tok/s 66399 | 17.8M tokens
+  step  3000 | loss 2.9976 | ppl 20.04 | lr 3.51e-05 | tok/s 66982 | 18.4M tokens
+  step  3100 | loss 2.9709 | ppl 19.51 | lr 3.19e-05 | tok/s 67536 | 19.0M tokens
+  step  3200 | loss 2.9460 | ppl 19.03 | lr 3.02e-05 | tok/s 68068 | 19.7M tokens
+  [EVAL] step 3255 | val_loss 2.2607 | val_ppl 9.59
+
+Final: val_loss=2.2602, val_ppl=9.58

@@ -1,0 +1,62 @@
+{
+  "success": true,
+  "config": {
+    "num_layers": 24,
+    "d_model": 512,
+    "num_heads": 8,
+    "context_length": 512,
+    "n_streams": 4,
+    "total_tokens": 20000000,
+    "batch_size": 48,
+    "preset": "deep-stress-512",
+    "method": "baseline",
+    "dataset": "tinystories",
+    "seed": 0,
+    "mlp_ratio": 4,
+    "dropout": 0.0,
+    "max_lr": 0.0003,
+    "min_lr": 3e-05,
+    "warmup_tokens": 2000000,
+    "grad_clip": 1.0,
+    "weight_decay": 0.1,
+    "beta1": 0.9,
+    "beta2": 0.95,
+    "use_amp": true,
+    "use_flash": true,
+    "use_compile": true,
+    "compile_mode": "max-autotune",
+    "compile_fullgraph": false,
+    "compile_dynamic": false,
+    "eval_every_tokens": 4000000,
+    "diagnostics_every": 50,
+    "eval_max_batches": 20,
+    "save_dir": "results/0524_deep_stress_512/deep-stress-512_baseline_seed0",
+    "num_workers": 4,
+    "max_samples": null,
+    "max_samples_val": null,
+    "train_cache_path": "data/lm_cache/tinystories_train_ctx512.pt",
+    "val_cache_path": "data/lm_cache/tinystories_validation_ctx512.pt",
+    "vocab_size": 50257,
+    "autotuned_peak_gb": 28.027833461761475
+  },
+  "final_eval": {
+    "val_loss": 2.431164813041687,
+    "val_ppl": 11.372120762785567,
+    "val_batches": 20
+  },
+  "train_metrics": [
+    {
+      "epoch": 0,
+      "steps": 814,
+      "total_tokens": 20004864,
+      "avg_loss": 3.628387547828056,
+      "final_ppl": 37.65205550447624,
+      "tokens_per_sec": 153891.18872253335,
+      "elapsed_sec": 129.99356341362
+    }
+  ],
+  "posthoc": {
+    "headmix": {}
+  },
+  "elapsed_sec": 134.128986120224
+}
