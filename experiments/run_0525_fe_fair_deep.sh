@@ -37,6 +37,7 @@ export TORCHINDUCTOR_CACHE_DIR="${CACHE_ROOT}/torchinductor_cache"
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 export CUDA_DEVICE_MAX_CONNECTIONS="${CUDA_DEVICE_MAX_CONNECTIONS:-1}"
 export OMP_NUM_THREADS="${OMP_NUM_THREADS:-4}"
+export PYTHONUNBUFFERED="${PYTHONUNBUFFERED:-1}"
 
 if ! command -v nvidia-smi >/dev/null 2>&1; then
   echo "nvidia-smi not found; refusing to launch a CPU run." >&2
@@ -44,9 +45,9 @@ if ! command -v nvidia-smi >/dev/null 2>&1; then
 fi
 nvidia-smi >/dev/null
 
-"${PYTHON_BIN}" experiments/lm_5090_next_runs.py \
+"${PYTHON_BIN}" -u experiments/lm_5090_next_runs.py \
   --preset "${PRESET}" \
-  --methods baseline unconstrained mhc isohc \
+  --methods baseline identity-hc unconstrained mhc isohc \
   --dataset fineweb-edu \
   --output_dir "${RESULT_ROOT}" \
   --total_tokens "${TOTAL_TOKENS}" \

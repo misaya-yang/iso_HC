@@ -186,7 +186,8 @@ def create_model(config, vocab_size, device):
             dropout=config["dropout"],
             use_flash=config["use_flash"],
         )
-    elif method in ("unconstrained", "mhc", "isohc", "orthogonal"):
+    elif method in ("identity-hc", "unconstrained", "mhc", "isohc", "orthogonal"):
+        mixing_type = "identity" if method == "identity-hc" else method
         model = TwoBranchHCTransformer(
             vocab_size=vocab_size,
             d_model=config["d_model"],
@@ -194,7 +195,7 @@ def create_model(config, vocab_size, device):
             num_heads=config["num_heads"],
             n_streams=config["n_streams"],
             context_length=config["context_length"],
-            mixing_type=method,
+            mixing_type=mixing_type,
             mlp_ratio=config["mlp_ratio"],
             dropout=config["dropout"],
             lambda_a=0.01,
@@ -229,7 +230,7 @@ def autotune_batch_size(config, tokenizer, device, memory_target_gb=30.0):
     if device.type != "cuda":
         return config["batch_size"], 0.0
 
-    candidates = [4, 8, 12, 16, 24, 32, 48, 64, 96, 128]
+    candidates = [4, 8, 12, 16, 20, 24, 28, 32, 40, 48, 64, 80, 96, 112, 128]
     candidates = [b for b in candidates if b <= max(128, config["batch_size"] * 2)]
     best_batch = None
     best_mem = 0.0
@@ -466,11 +467,11 @@ def main():
         raise RuntimeError("--require_cuda was set, but CUDA is not available.")
 
     default_methods = {
-        "run0": ["baseline", "unconstrained", "mhc", "isohc"],
-        "deep-stress": ["baseline", "unconstrained", "mhc", "isohc"],
-        "deep-stress-512": ["baseline", "unconstrained", "mhc", "isohc"],
-        "fe-deep-36l-512": ["baseline", "unconstrained", "mhc", "isohc"],
-        "fe-deep-48l-512": ["baseline", "unconstrained", "mhc", "isohc"],
+        "run0": ["baseline", "identity-hc", "unconstrained", "mhc", "isohc"],
+        "deep-stress": ["baseline", "identity-hc", "unconstrained", "mhc", "isohc"],
+        "deep-stress-512": ["baseline", "identity-hc", "unconstrained", "mhc", "isohc"],
+        "fe-deep-36l-512": ["baseline", "identity-hc", "unconstrained", "mhc", "isohc"],
+        "fe-deep-48l-512": ["baseline", "identity-hc", "unconstrained", "mhc", "isohc"],
         "125m-smoke": ["mhc", "isohc"],
         "headmix": [
             "baseline",

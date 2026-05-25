@@ -8,6 +8,7 @@
 - 服务器在中国网络环境下不要依赖直连 Hugging Face；FE token cache 已经提前准备好。
 - 主实验不使用逐方法 `--auto_batch`；使用 `--fair_auto_batch` 先探测所有方法，再统一采用所有方法都能跑的最大 common batch。
 - 所有方法共享：同一 `preset`、同一 `batch_size`、同一 `grad_accum_steps`、同一 `total_tokens`、同一 tokenizer/cache、同一 eval 设置。
+- 主表包含 `baseline`、`identity-hc`、`unconstrained`、`mhc`、`isohc`。其中 `identity-hc` 用同一个 multi-stream wrapper 但固定 `H=I`，用于隔离 HC wrapper 本身和 mixing 约束的影响。
 - 大模型机制实验默认 `--no_save_checkpoints`，只保存 `summary.json`、`run_summary.json` 和 fair batch probe，避免数据盘写大 checkpoint 干扰速度。
 
 ## 已准备的数据

@@ -1,0 +1,16 @@
+[] autopoweroff watcher start
+[] still running; done_count=1
+[] still running; done_count=2
+[] still running; done_count=2
+[] still running; done_count=3
+[] still running; done_count=3
+[] still running; done_count=3
+[] still running; done_count=3
+[] still running; done_count=4
+[] still running; done_count=4
+[] still running; done_count=4
+[] training process not found; done_count=5; no poweroff unless summary exists
+[] training process not found; done_count=5; no poweroff unless summary exists
+[] training process not found; done_count=5; no poweroff unless summary exists
+[] training process not found; done_count=5; no poweroff unless summary exists
+[] training process not found; done_count=5; no poweroff unless summary exists

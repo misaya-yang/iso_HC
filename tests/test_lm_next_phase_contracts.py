@@ -12,7 +12,7 @@ from lm.data import create_dataloader, save_token_cache, TokenizedTextDataset
 from lm.headmix import HeadOutputMixing
 from lm.models import CausalSelfAttention, TwoBranchHCTransformer
 from lm.train import run_experiment
-from experiments.lm_5090_next_runs import build_preset_configs
+from experiments.lm_5090_next_runs import build_preset_configs, create_model
 
 
 class LMNextPhaseContractTests(unittest.TestCase):
@@ -173,13 +173,13 @@ class LMNextPhaseContractTests(unittest.TestCase):
     def test_5090_presets_match_teacher_run_plan(self):
         configs = build_preset_configs(
             preset="deep-stress",
-            methods=["baseline", "unconstrained", "mhc", "isohc"],
+            methods=["baseline", "identity-hc", "unconstrained", "mhc", "isohc"],
             output_dir="outputs/test",
             total_tokens=1_000_000,
             batch_size=8,
         )
         self.assertEqual([c["method"] for c in configs],
-                         ["baseline", "unconstrained", "mhc", "isohc"])
+                         ["baseline", "identity-hc", "unconstrained", "mhc", "isohc"])
         self.assertTrue(all(c["num_layers"] == 24 for c in configs))
         self.assertTrue(all(c["context_length"] == 512 for c in configs))
         self.assertTrue(all(c["n_streams"] == 4 for c in configs))
@@ -198,13 +198,25 @@ class LMNextPhaseContractTests(unittest.TestCase):
 
         fe_deep = build_preset_configs(
             preset="fe-deep-36l-512",
-            methods=["baseline", "mhc", "isohc"],
+            methods=["baseline", "identity-hc", "mhc", "isohc"],
             output_dir="outputs/test",
         )
         self.assertTrue(all(c["num_layers"] == 36 for c in fe_deep))
         self.assertTrue(all(c["d_model"] == 512 for c in fe_deep))
         self.assertTrue(all(c["context_length"] == 512 for c in fe_deep))
         self.assertTrue(all(c["batch_size"] == 8 for c in fe_deep))
+
+    def test_identity_hc_method_uses_multistream_identity_mixing(self):
+        cfg = build_preset_configs(
+            preset="run0",
+            methods=["identity-hc"],
+            output_dir="outputs/test",
+            batch_size=2,
+        )[0]
+        model = create_model(cfg, vocab_size=128, device=torch.device("cpu"))
+
+        self.assertIsInstance(model, TwoBranchHCTransformer)
+        self.assertEqual(model.mixing_type, "identity")
 
     def test_run_experiment_respects_gradient_accumulation_steps(self):
         class TinyLM(nn.Module):

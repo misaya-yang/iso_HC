@@ -1,0 +1,22 @@
+{
+  "baseline": {
+    "max_fitting_batch": 32,
+    "probe_peak_gb": 28.314676761627197
+  },
+  "identity-hc": {
+    "max_fitting_batch": 24,
+    "probe_peak_gb": 28.296132564544678
+  },
+  "unconstrained": {
+    "max_fitting_batch": 20,
+    "probe_peak_gb": 27.497609615325928
+  },
+  "mhc": {
+    "max_fitting_batch": 20,
+    "probe_peak_gb": 27.499486446380615
+  },
+  "isohc": {
+    "max_fitting_batch": 20,
+    "probe_peak_gb": 27.498525142669678
+  }
+}
