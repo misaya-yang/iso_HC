@@ -25,6 +25,7 @@ from lm.data import create_dataloader, get_tokenizer
 from lm.diagnostics import compute_mean_zero_energy, compute_stream_cosine
 from lm.models import BaselineTransformer, TwoBranchHCTransformer
 from lm.train import run_experiment
+from lm.transport_analysis import collect_transport_report
 
 
 PRESETS = {
@@ -186,8 +187,20 @@ def create_model(config, vocab_size, device):
             dropout=config["dropout"],
             use_flash=config["use_flash"],
         )
-    elif method in ("identity-hc", "unconstrained", "mhc", "isohc", "orthogonal"):
-        mixing_type = "identity" if method == "identity-hc" else method
+    elif method in (
+        "identity-hc",
+        "unconstrained",
+        "mhc",
+        "isohc",
+        "orthogonal",
+        "spectral-hc",
+        "fixed-vector-spectral-hc",
+    ):
+        mixing_type = {
+            "identity-hc": "identity",
+            "spectral-hc": "spectral",
+            "fixed-vector-spectral-hc": "fixed-vector-spectral",
+        }.get(method, method)
         model = TwoBranchHCTransformer(
             vocab_size=vocab_size,
             d_model=config["d_model"],
@@ -230,7 +243,7 @@ def autotune_batch_size(config, tokenizer, device, memory_target_gb=30.0):
     if device.type != "cuda":
         return config["batch_size"], 0.0
 
-    candidates = [4, 8, 12, 16, 20, 24, 28, 32, 40, 48, 64, 80, 96, 112, 128]
+    candidates = [4, 8, 12, 16, 18, 20, 22, 24, 26, 28, 30, 32, 36, 40, 48, 64, 80, 96, 112, 128]
     candidates = [b for b in candidates if b <= max(128, config["batch_size"] * 2)]
     best_batch = None
     best_mem = 0.0
@@ -311,6 +324,7 @@ def collect_posthoc_diagnostics(model, val_loader, device):
     if hasattr(model, "get_diagnostics"):
         diags = model.get_diagnostics()
         if diags:
+            result["h_diagnostics_layers"] = diags
             numeric_keys = sorted({
                 key for diag in diags for key, value in diag.items()
                 if isinstance(value, (int, float))
@@ -323,6 +337,8 @@ def collect_posthoc_diagnostics(model, val_loader, device):
                 f"{key}_max": max(float(d.get(key, 0.0)) for d in diags)
                 for key in numeric_keys
             })
+    if hasattr(model, "get_named_mixing_matrices"):
+        result["transport_complement"] = collect_transport_report(model)
 
     if hasattr(model, "get_headmix_diagnostics"):
         result["headmix"] = model.get_headmix_diagnostics()
@@ -397,6 +413,8 @@ def run_single(config, auto_batch=False, memory_target_gb=30.0):
         "eval_max_batches": config["eval_max_batches"],
         "grad_accum_steps": config.get("grad_accum_steps", 1),
         "save_checkpoints": config.get("save_checkpoints", True),
+        "save_best_checkpoints": config.get("save_best_checkpoints", True),
+        "save_final_checkpoint": config.get("save_final_checkpoint", config.get("save_checkpoints", True)),
         "use_compile": config["use_compile"],
         "compile_mode": config["compile_mode"],
         "compile_fullgraph": config["compile_fullgraph"],
@@ -454,6 +472,13 @@ def main():
     parser.add_argument("--grad_accum_steps", type=int, default=1)
     parser.add_argument("--no_save_checkpoints", dest="save_checkpoints",
                         action="store_false", default=True)
+    parser.add_argument("--no_save_best_checkpoints", dest="save_best_checkpoints",
+                        action="store_false", default=True,
+                        help="Skip best.pt writes during training; final.pt can still be saved.")
+    parser.add_argument("--no_save_final_checkpoint", dest="save_final_checkpoint",
+                        action="store_false", default=True)
+    parser.add_argument("--eval_every_tokens", type=int, default=None)
+    parser.add_argument("--eval_max_batches", type=int, default=None)
     parser.add_argument("--require_cuda", action="store_true",
                         help="Abort instead of accidentally launching a CPU run.")
     parser.add_argument("--max_samples", type=int, default=None)
@@ -498,6 +523,12 @@ def main():
         cfg["prefetch_factor"] = args.prefetch_factor
         cfg["grad_accum_steps"] = args.grad_accum_steps
         cfg["save_checkpoints"] = args.save_checkpoints
+        cfg["save_best_checkpoints"] = args.save_best_checkpoints and args.save_checkpoints
+        cfg["save_final_checkpoint"] = args.save_final_checkpoint and args.save_checkpoints
+        if args.eval_every_tokens is not None:
+            cfg["eval_every_tokens"] = args.eval_every_tokens
+        if args.eval_max_batches is not None:
+            cfg["eval_max_batches"] = args.eval_max_batches
         cfg["max_samples"] = args.max_samples
         cfg["max_samples_val"] = args.max_samples_val
         cfg["train_cache_path"] = args.train_cache_path

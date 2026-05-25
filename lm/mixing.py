@@ -6,6 +6,8 @@ Mixing types:
   - orthogonal: H^T H = I (plain orthogonal, no fixed-vector constraint)
   - isohc: H^T H = I, H @ 1 = 1 (fixed-vector isometry)
   - mhc: H @ 1 = 1, 1^T H = 1^T, H >= 0 (doubly stochastic via Sinkhorn)
+  - spectral: ||H||_2 <= 1 (signed spectral control, no fixed-vector constraint)
+  - fixed-vector-spectral: H @ 1 = 1, 1^T H = 1^T, ||U^T H U||_2 <= 1
 """
 
 import math
@@ -88,6 +90,98 @@ class OrthogonalMixing(StreamMixing):
         ones = torch.ones(n, 1, device=H.device, dtype=torch.float32)
         fix_error = torch.norm(H @ ones - ones, p=2).item()
         return {'orth_error': orth_error, 'fix_error': fix_error}
+
+
+class SpectralMixing(StreamMixing):
+    """Signed mixing with spectral norm constrained to at most one.
+
+    This is an sHC-like stress baseline: it prevents expansion, but it does not
+    preserve the residual-stream mean and does not prevent directional
+    contraction.
+    """
+
+    def __init__(self, n_streams, init_scale=0.01):
+        super().__init__(n_streams)
+        self.H_raw = nn.Parameter(
+            torch.eye(n_streams) + torch.randn(n_streams, n_streams) * init_scale
+        )
+        U = construct_orthogonal_complement(n_streams, device='cpu', dtype=torch.float32)
+        self.register_buffer('U', U)
+
+    def forward(self):
+        H = self.H_raw.float()
+        smax = torch.linalg.svdvals(H).max()
+        scale = torch.clamp(smax, min=torch.ones((), device=H.device, dtype=H.dtype))
+        return (H / scale).to(dtype=self.H_raw.dtype)
+
+    def get_diagnostics(self):
+        H = self.forward().detach().float()
+        n = self.n_streams
+        device = H.device
+        ones = torch.ones(n, 1, device=device, dtype=torch.float32)
+        U = self.U.to(device=device, dtype=torch.float32)
+        A = U.T @ H @ U
+        s = torch.linalg.svdvals(A)
+
+        return {
+            'spectral_norm': torch.linalg.svdvals(H).max().item(),
+            'fix_error': torch.norm(H @ ones - ones, p=2).item(),
+            'col_fix_error': torch.norm(H.T @ ones - ones, p=2).item(),
+            'sv_min_1perp': s.min().item(),
+            'sv_max_1perp': s.max().item(),
+            'sv_mean_1perp': s.mean().item(),
+        }
+
+
+class FixedVectorSpectralMixing(StreamMixing):
+    """Fixed-vector spectral baseline.
+
+    It preserves the stream mean exactly and constrains the complement spectral
+    norm, but unlike IsoHC it may shrink some or all directions in 1_perp.
+    """
+
+    def __init__(self, n_streams, init_scale=0.01):
+        super().__init__(n_streams)
+        self.H_raw = nn.Parameter(
+            torch.eye(n_streams) + torch.randn(n_streams, n_streams) * init_scale
+        )
+        U = construct_orthogonal_complement(n_streams, device='cpu', dtype=torch.float32)
+        self.register_buffer('U', U)
+
+    def forward(self):
+        raw = self.H_raw.float()
+        n = self.n_streams
+        device = raw.device
+        U = self.U.to(device=device, dtype=torch.float32)
+        v = torch.ones(n, 1, device=device, dtype=torch.float32) / (n ** 0.5)
+
+        B = U.T @ raw @ U
+        smax = torch.linalg.svdvals(B).max()
+        scale = torch.clamp(smax, min=torch.ones((), device=device, dtype=torch.float32))
+        B = B / scale
+        H = v @ v.T + U @ B @ U.T
+        return H.to(dtype=self.H_raw.dtype)
+
+    def get_diagnostics(self):
+        H = self.forward().detach().float()
+        n = self.n_streams
+        device = H.device
+        ones = torch.ones(n, 1, device=device, dtype=torch.float32)
+        I = torch.eye(n, device=device, dtype=torch.float32)
+        U = self.U.to(device=device, dtype=torch.float32)
+        A = U.T @ H @ U
+        s = torch.linalg.svdvals(A)
+
+        return {
+            'spectral_norm_1perp': s.max().item(),
+            'fix_error': torch.norm(H @ ones - ones, p=2).item(),
+            'col_fix_error': torch.norm(H.T @ ones - ones, p=2).item(),
+            'orth_error': torch.norm(H.T @ H - I, p='fro').item(),
+            'identity_distance_1perp': torch.norm(A - torch.eye(n - 1, device=device), p='fro').item(),
+            'sv_min_1perp': s.min().item(),
+            'sv_max_1perp': s.max().item(),
+            'sv_mean_1perp': s.mean().item(),
+        }
 
 
 class IsoHCMixing(StreamMixing):
@@ -222,7 +316,8 @@ def create_mixing(n_streams, mixing_type, **kwargs):
 
     Args:
         n_streams: number of streams
-        mixing_type: 'identity', 'unconstrained', 'orthogonal', 'isohc', 'mhc'
+        mixing_type: 'identity', 'unconstrained', 'orthogonal', 'isohc',
+            'mhc', 'spectral', or 'fixed-vector-spectral'
         **kwargs: passed to mixing constructor
     """
     if mixing_type == 'identity':
@@ -231,6 +326,13 @@ def create_mixing(n_streams, mixing_type, **kwargs):
         return UnconstrainedMixing(n_streams, init_scale=kwargs.get('init_scale', 0.01))
     elif mixing_type == 'orthogonal':
         return OrthogonalMixing(n_streams, init_scale=kwargs.get('init_scale', 0.01))
+    elif mixing_type == 'spectral':
+        return SpectralMixing(n_streams, init_scale=kwargs.get('init_scale', 0.01))
+    elif mixing_type == 'fixed-vector-spectral':
+        return FixedVectorSpectralMixing(
+            n_streams,
+            init_scale=kwargs.get('init_scale', 0.01),
+        )
     elif mixing_type == 'isohc':
         return IsoHCMixing(
             n_streams,

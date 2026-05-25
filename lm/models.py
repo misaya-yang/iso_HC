@@ -625,20 +625,82 @@ class TwoBranchHCTransformer(nn.Module):
         ones = torch.ones(self.n_streams, device=weights.device, dtype=weights.dtype)
         return ones + lambda_param * (weights - weights.mean())
 
-    def _transport(self, X, delta, mixing, injection_weights):
-        H = mixing()
+    def _transport(self, X, delta, mixing, injection_weights, mixing_override=None):
+        H = mixing() if mixing_override is None else mixing_override
         b = self._make_stream_vector(injection_weights, self.injection_lambda)
         mixed = torch.einsum("ij,jbtd->ibtd", H, X)
         injected = b.view(self.n_streams, 1, 1, 1) * delta.unsqueeze(0)
         return mixed + injected
 
-    def forward(self, input_ids, targets=None):
+    def _apply_stream_intervention(self, X, state_index, stream_intervention):
+        if stream_intervention is None:
+            return X
+        target = stream_intervention.get("state_index")
+        if isinstance(target, (list, tuple, set)):
+            active = state_index in target
+        else:
+            active = state_index == target
+        if not active:
+            return X
+
+        mean = X.mean(dim=0, keepdim=True)
+        mode = stream_intervention.get("mode", "mean_only")
+        if mode == "mean_only":
+            return mean.expand_as(X)
+        if mode == "scale_perp":
+            scale = float(stream_intervention.get("scale", 0.0))
+            return mean + scale * (X - mean)
+        raise ValueError(f"Unknown stream intervention mode: {mode}")
+
+    def _resolve_mixing_override(self, branch, layer, mixing_overrides, device, dtype):
+        if mixing_overrides is None:
+            return None
+        value = None
+        if isinstance(mixing_overrides, str):
+            value = mixing_overrides
+        elif isinstance(mixing_overrides, dict):
+            value = mixing_overrides.get((branch, layer))
+            if value is None:
+                value = mixing_overrides.get(f"{branch}:{layer}")
+            if value is None:
+                value = mixing_overrides.get(branch)
+        else:
+            value = mixing_overrides
+
+        if value is None:
+            return None
+        if isinstance(value, str):
+            if value != "identity":
+                raise ValueError(f"Unknown mixing override: {value}")
+            return torch.eye(self.n_streams, device=device, dtype=dtype)
+        return value.to(device=device, dtype=dtype)
+
+    @staticmethod
+    def _record_stream_state(states, X, retain_stream_grads):
+        if retain_stream_grads and X.requires_grad:
+            X.retain_grad()
+        states.append(X)
+
+    def forward(
+        self,
+        input_ids,
+        targets=None,
+        stream_intervention=None,
+        mixing_overrides=None,
+        return_stream_states=False,
+        retain_stream_grads=False,
+    ):
         B, T = input_ids.shape
         assert T <= self.context_length
 
         tok_emb = self.token_embedding(input_ids)
         pos_emb = self.pos_embedding(torch.arange(T, device=input_ids.device))
         X = (tok_emb + pos_emb).unsqueeze(0) + self.stream_embed.unsqueeze(1)
+        X = self._apply_stream_intervention(X, 0, stream_intervention)
+        states = []
+        if return_stream_states:
+            self._record_stream_state(states, X, retain_stream_grads)
+        state_index = 0
 
         for l in range(self.num_layers):
             a_attn = self._make_stream_vector(
@@ -646,18 +708,40 @@ class TwoBranchHCTransformer(nn.Module):
             )
             z_attn = torch.einsum("s,sbtd->btd", a_attn, X) / self.n_streams
             delta_attn = self.attns[l](self.attn_norms[l](z_attn))
-            X = self._transport(
-                X, delta_attn, self.attn_mixings[l], self.attn_injection_weights[l]
+            attn_override = self._resolve_mixing_override(
+                "attn", l, mixing_overrides, X.device, X.dtype
             )
+            X = self._transport(
+                X,
+                delta_attn,
+                self.attn_mixings[l],
+                self.attn_injection_weights[l],
+                mixing_override=attn_override,
+            )
+            state_index += 1
+            X = self._apply_stream_intervention(X, state_index, stream_intervention)
+            if return_stream_states:
+                self._record_stream_state(states, X, retain_stream_grads)
 
             a_mlp = self._make_stream_vector(
                 self.mlp_readout_weights[l], self.readout_lambda
             )
             z_mlp = torch.einsum("s,sbtd->btd", a_mlp, X) / self.n_streams
             delta_mlp = self.mlps[l](self.mlp_norms[l](z_mlp))
-            X = self._transport(
-                X, delta_mlp, self.mlp_mixings[l], self.mlp_injection_weights[l]
+            mlp_override = self._resolve_mixing_override(
+                "mlp", l, mixing_overrides, X.device, X.dtype
             )
+            X = self._transport(
+                X,
+                delta_mlp,
+                self.mlp_mixings[l],
+                self.mlp_injection_weights[l],
+                mixing_override=mlp_override,
+            )
+            state_index += 1
+            X = self._apply_stream_intervention(X, state_index, stream_intervention)
+            if return_stream_states:
+                self._record_stream_state(states, X, retain_stream_grads)
 
         a_final = self._make_stream_vector(self.readout_final, self.readout_final_lambda)
         z_final = torch.einsum("s,sbtd->btd", a_final, X) / self.n_streams
@@ -671,6 +755,8 @@ class TwoBranchHCTransformer(nn.Module):
                 targets.view(-1),
                 ignore_index=-100,
             )
+        if return_stream_states:
+            return logits, loss, states
         return logits, loss
 
     def get_diagnostics(self):
@@ -695,32 +781,27 @@ class TwoBranchHCTransformer(nn.Module):
         return sum(p.numel() for p in self.parameters())
 
     @torch.no_grad()
+    def get_named_mixing_matrices(self):
+        matrices = []
+        index = 0
+        for layer in range(self.num_layers):
+            matrices.append({
+                "index": index,
+                "branch": "attn",
+                "layer": layer,
+                "H": self.attn_mixings[layer]().detach().clone(),
+            })
+            index += 1
+            matrices.append({
+                "index": index,
+                "branch": "mlp",
+                "layer": layer,
+                "H": self.mlp_mixings[layer]().detach().clone(),
+            })
+            index += 1
+        return matrices
+
+    @torch.no_grad()
     def get_stream_states(self, input_ids):
-        B, T = input_ids.shape
-        tok_emb = self.token_embedding(input_ids)
-        pos_emb = self.pos_embedding(torch.arange(T, device=input_ids.device))
-        X = (tok_emb + pos_emb).unsqueeze(0) + self.stream_embed.unsqueeze(1)
-        states = [X.detach().clone()]
-
-        for l in range(self.num_layers):
-            a_attn = self._make_stream_vector(
-                self.attn_readout_weights[l], self.readout_lambda
-            )
-            z_attn = torch.einsum("s,sbtd->btd", a_attn, X) / self.n_streams
-            delta_attn = self.attns[l](self.attn_norms[l](z_attn))
-            X = self._transport(
-                X, delta_attn, self.attn_mixings[l], self.attn_injection_weights[l]
-            )
-            states.append(X.detach().clone())
-
-            a_mlp = self._make_stream_vector(
-                self.mlp_readout_weights[l], self.readout_lambda
-            )
-            z_mlp = torch.einsum("s,sbtd->btd", a_mlp, X) / self.n_streams
-            delta_mlp = self.mlps[l](self.mlp_norms[l](z_mlp))
-            X = self._transport(
-                X, delta_mlp, self.mlp_mixings[l], self.mlp_injection_weights[l]
-            )
-            states.append(X.detach().clone())
-
-        return states
+        _, _, states = self.forward(input_ids, return_stream_states=True)
+        return [state.detach().clone() for state in states]

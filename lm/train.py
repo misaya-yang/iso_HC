@@ -46,7 +46,8 @@ def train_epoch(model, dataloader, optimizer, device,
                 diagnostics=None, eval_every_steps=None,
                 eval_fn=None, save_dir=None,
                 grad_accum_steps=1,
-                save_checkpoints=True):
+                save_checkpoints=True,
+                save_best_checkpoints=True):
     """Train for one epoch (or until token budget exhausted).
 
     Args:
@@ -182,7 +183,7 @@ def train_epoch(model, dataloader, optimizer, device,
                 diagnostics.record(**val_metrics)
 
             # Save best
-            if val_loss < best_val_loss and save_dir and save_checkpoints:
+            if val_loss < best_val_loss and save_dir and save_checkpoints and save_best_checkpoints:
                 best_val_loss = val_loss
                 torch.save({
                     'step': step,
@@ -363,6 +364,7 @@ def run_experiment(model, train_loader, val_loader, config, device):
             save_dir=config['save_dir'],
             grad_accum_steps=grad_accum_steps,
             save_checkpoints=config.get('save_checkpoints', True),
+            save_best_checkpoints=config.get('save_best_checkpoints', True),
         )
         all_metrics.append(metrics)
         epoch += 1
@@ -380,7 +382,7 @@ def run_experiment(model, train_loader, val_loader, config, device):
 
     # Save final checkpoint only when explicitly useful. Large FE sweeps can
     # spend more time writing weights than collecting mechanism evidence.
-    if config.get('save_checkpoints', True):
+    if config.get('save_final_checkpoint', config.get('save_checkpoints', True)):
         torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),

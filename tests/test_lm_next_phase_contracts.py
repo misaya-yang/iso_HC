@@ -10,8 +10,10 @@ import torch.nn.functional as F
 from lm.diagnostics import compute_head_output_stats
 from lm.data import create_dataloader, save_token_cache, TokenizedTextDataset
 from lm.headmix import HeadOutputMixing
+from lm.mixing import create_mixing
 from lm.models import CausalSelfAttention, TwoBranchHCTransformer
 from lm.train import run_experiment
+from lm.transport_analysis import collect_transport_report, complement_spectrum
 from experiments.lm_5090_next_runs import build_preset_configs, create_model
 
 
@@ -161,6 +163,84 @@ class LMNextPhaseContractTests(unittest.TestCase):
         self.assertEqual(len(states), 1 + 2 * model.num_layers)
         self.assertEqual(states[0].shape, (4, 2, 16, 48))
 
+    def test_spectral_mixing_baselines_expose_missing_isometry_control(self):
+        torch.manual_seed(17)
+        spectral = create_mixing(4, "spectral", init_scale=0.7)
+        H_spectral = spectral()
+        self.assertLessEqual(torch.linalg.svdvals(H_spectral.float()).max().item(), 1.0001)
+
+        fixed_vector = create_mixing(4, "fixed-vector-spectral", init_scale=0.7)
+        H_fixed = fixed_vector()
+        ones = torch.ones(4, 1)
+        spec = complement_spectrum(H_fixed)
+
+        self.assertLess(torch.norm(H_fixed @ ones - ones).item(), 1e-5)
+        self.assertLessEqual(spec["sv_max"], 1.0001)
+        self.assertIn("fix_error", fixed_vector.get_diagnostics())
+
+    def test_transport_report_tracks_composite_complement_gain(self):
+        eye = torch.eye(4)
+        identity_report = collect_transport_report([
+            {"branch": "attn", "layer": 0, "H": eye},
+            {"branch": "mlp", "layer": 0, "H": eye},
+        ])
+        self.assertAlmostEqual(identity_report["prefix"][-1]["composite_sv_mean"], 1.0, places=5)
+        self.assertAlmostEqual(identity_report["prefix"][-1]["product_sv_mean"], 1.0, places=5)
+
+        contraction = 0.5 * eye + 0.5 * torch.ones(4, 4) / 4
+        contraction_report = collect_transport_report([
+            {"branch": "attn", "layer": 0, "H": contraction},
+            {"branch": "mlp", "layer": 0, "H": contraction},
+        ])
+        self.assertLess(contraction_report["prefix"][-1]["composite_sv_mean"], 1.0)
+        self.assertLess(contraction_report["prefix"][-1]["product_sv_mean"], 1.0)
+
+    def test_two_branch_forward_supports_complement_removal_and_stream_grad_capture(self):
+        torch.manual_seed(19)
+        model = TwoBranchHCTransformer(
+            vocab_size=96,
+            d_model=32,
+            num_layers=2,
+            num_heads=4,
+            n_streams=4,
+            context_length=12,
+            mixing_type="isohc",
+            ns_steps=3,
+            use_flash=True,
+        )
+        x = torch.randint(0, 96, (2, 12))
+        logits, loss, states = model(
+            x,
+            x,
+            stream_intervention={"state_index": 1, "mode": "mean_only"},
+            return_stream_states=True,
+            retain_stream_grads=True,
+        )
+        loss.backward()
+
+        self.assertEqual(logits.shape, (2, 12, 96))
+        self.assertEqual(len(states), 1 + 2 * model.num_layers)
+        self.assertTrue(torch.isfinite(loss))
+        self.assertIsNotNone(states[1].grad)
+        mean_only_state = states[1].detach()
+        self.assertLess(torch.norm(mean_only_state - mean_only_state.mean(dim=0, keepdim=True)).item(), 1e-5)
+
+    def test_two_branch_named_mixing_matrices_are_ordered_by_transport_step(self):
+        model = TwoBranchHCTransformer(
+            vocab_size=64,
+            d_model=32,
+            num_layers=3,
+            num_heads=4,
+            n_streams=4,
+            context_length=8,
+            mixing_type="identity",
+        )
+        named = model.get_named_mixing_matrices()
+
+        self.assertEqual(len(named), 6)
+        self.assertEqual([(m["branch"], m["layer"]) for m in named[:2]], [("attn", 0), ("mlp", 0)])
+        self.assertEqual(named[0]["H"].shape, (4, 4))
+
     def test_head_output_stats_reports_diversity_and_effective_rank(self):
         x = torch.randn(2, 5, 4, 8)
         stats = compute_head_output_stats(x)
@@ -217,6 +297,19 @@ class LMNextPhaseContractTests(unittest.TestCase):
 
         self.assertIsInstance(model, TwoBranchHCTransformer)
         self.assertEqual(model.mixing_type, "identity")
+
+    def test_spectral_hc_methods_are_available_to_experiment_runner(self):
+        configs = build_preset_configs(
+            preset="run0",
+            methods=["spectral-hc", "fixed-vector-spectral-hc"],
+            output_dir="outputs/test",
+            batch_size=2,
+        )
+        spectral = create_model(configs[0], vocab_size=128, device=torch.device("cpu"))
+        fixed = create_model(configs[1], vocab_size=128, device=torch.device("cpu"))
+
+        self.assertEqual(spectral.mixing_type, "spectral")
+        self.assertEqual(fixed.mixing_type, "fixed-vector-spectral")
 
     def test_run_experiment_respects_gradient_accumulation_steps(self):
         class TinyLM(nn.Module):
