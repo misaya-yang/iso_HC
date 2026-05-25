@@ -1,6 +1,6 @@
 # IsoHC 实验综合总结报告
 
-**日期**: 2026-05-11
+**日期**: 2026-05-11，0525 更新 LM 机制分析
 **核心主题**: fixed-vector isometric operator (IsoHC) 的数学正确性、深层稳定性、及下游任务验证
 
 ---
@@ -236,7 +236,26 @@ overnight shell、TinyShakespeare real-text grid 脚本已删除，避免误跑�
 
 ---
 
-## 7. 结论
+## 7. 0525 LM 机制更新
+
+48L FineWeb-Edu 20M-token checkpointed run 后，新增了 `eval_batches=16`
+的 posthoc 机制评估，原始结果位于
+`docs/0605_alldoc/0525_results_raw/0525_core_mhc_isohc_48l_p51198/posthoc_eval16/`，
+单独报告见 `docs/0605_alldoc/0525_posthoc_eval16_report.md`。
+
+| 方法 | val loss | PPL | final composite sv mean on 1_perp | best complement removal delta | Iso->I / mHC->I delta |
+|------|---------:|----:|----------------------------------:|------------------------------:|----------------------:|
+| mHC | 5.900727 | 365.30 | 0.000439 | +0.000289 | -0.000524 |
+| IsoHC | 5.901274 | 365.50 | 0.996349 | +0.000516 | +0.000713 |
+
+这次更稳的 posthoc 结果没有反转结论：mHC 的 mean-zero transport
+在 48 层后几乎耗散到零，而 IsoHC 基本保持等距。但 complement removal
+和 replacement 对 loss 的影响仍只有 `1e-4` 到 `1e-3` 量级，因此当前
+LM 证据应表述为“强机制诊断”，还不能表述为“IsoHC 已经显著优于 mHC
+训练 LM”。下一步应优先做 seed robustness、72L depth scaling，以及在
+intervention signal 变强后再考虑长 token mHC-vs-IsoHC bridge。
+
+## 8. 结论
 
 IsoHC 的 fixed-vector isometric operator 在以下所有维度上通过验证：
 

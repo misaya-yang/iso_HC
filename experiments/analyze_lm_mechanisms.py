@@ -42,7 +42,7 @@ def load_model_from_run(run_dir, device):
     if not ckpt_path.exists():
         raise FileNotFoundError(f"Missing checkpoint: {ckpt_path}")
 
-    ckpt = torch.load(ckpt_path, map_location=device)
+    ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     config = dict(ckpt.get("config", {}))
     summary_path = run_dir / "run_summary.json"
     if summary_path.exists():
@@ -64,6 +64,7 @@ def load_model_from_run(run_dir, device):
 def make_val_loader(config, vocab_size, args):
     val_cache_path = args.val_cache_path or config.get("val_cache_path")
     dataset = args.dataset or config.get("dataset", "tinystories")
+    batch_size = args.batch_size if args.batch_size is not None else min(2, int(config.get("batch_size", 2)))
 
     if dataset == "random" or val_cache_path:
         tokenizer = SimpleNamespace(vocab_size=vocab_size)
@@ -74,7 +75,7 @@ def make_val_loader(config, vocab_size, args):
         dataset,
         tokenizer,
         config["context_length"],
-        batch_size=args.batch_size or config.get("batch_size", 4),
+        batch_size=batch_size,
         split="validation",
         max_samples=args.max_samples_val or config.get("max_samples_val"),
         cache_path=val_cache_path,
@@ -154,6 +155,8 @@ def stream_gradient_profile(model, val_loader, device, use_amp=True):
     x_centered = xs - xs.mean()
     slope = ((x_centered * (ys - ys.mean())).sum() / (x_centered.square().sum() + 1e-12)).item()
     model.zero_grad(set_to_none=True)
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
     return {
         "loss": loss.item(),
         "slope_log_grad_ratio": slope,
@@ -236,6 +239,8 @@ def analyze_run(run_dir, args, device):
             device,
             use_amp=use_amp,
         )
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
         if not args.skip_interventions:
             report["complement_removal"] = complement_removal_curve(
                 model,
@@ -268,6 +273,8 @@ def analyze_run(run_dir, args, device):
                 **random_eval,
                 "delta_loss": random_eval["val_loss"] - base["val_loss"],
             }
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
 
     return report
 
@@ -331,7 +338,12 @@ def main():
     parser.add_argument("--output_dir", required=True)
     parser.add_argument("--dataset", default=None)
     parser.add_argument("--val_cache_path", default=None)
-    parser.add_argument("--batch_size", type=int, default=None)
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=None,
+        help="Posthoc batch size. Defaults to min(2, training batch) to avoid gradient-capture OOM.",
+    )
     parser.add_argument("--max_samples_val", type=int, default=None)
     parser.add_argument("--eval_batches", type=int, default=4)
     parser.add_argument("--intervention_stride", type=int, default=8)
