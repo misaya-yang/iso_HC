@@ -18,8 +18,7 @@ repair for that missing geometry.
 ```
 
 The missing evidence is whether the preserved `1_perp` signal is actually used
-by the model, and whether identity-HC / unconstrained HC / spectral baselines
-explain away IsoHC.
+by the model, and whether identity-HC / unconstrained HC explain away IsoHC.
 
 ## Code Added For This Phase
 
@@ -27,9 +26,6 @@ explain away IsoHC.
   - per-layer `1_perp` singular spectrum
   - cumulative/composite complement gain
   - product-of-single-step contraction curve
-- `lm/mixing.py`
-  - `spectral`
-  - `fixed-vector-spectral`
 - `lm/models.py`
   - validation-time stream intervention: `mean_only` / `scale_perp`
   - stream-state gradient capture
@@ -39,8 +35,12 @@ explain away IsoHC.
   - checkpoint posthoc analysis for composite gain, gradient profile,
     complement removal, IsoHC->I, and IsoHC->random-Iso.
 - `experiments/lm_5090_next_runs.py`
-  - supports `spectral-hc` and `fixed-vector-spectral-hc`
   - stores per-layer mixer diagnostics and transport complement report.
+
+Spectral/SVD training baselines were removed from the main code path on
+2026-05-25 after they caused the wrong experiment to be launched. IsoHC training
+uses Newton-Schulz fixed-vector projection. SVD is allowed only in posthoc
+diagnostics, exact projection sanity checks, or future isolated appendix code.
 
 ## Fairness Rules
 
@@ -95,27 +95,15 @@ bash experiments/run_0525_mechanism_gpu_pipeline.sh
 
 This pipeline uses fair batch probing with finer candidates, keeps all caches on
 `/root/autodl-tmp/isoHC`, disables repeated `best.pt` writes, lowers mid-training
-evaluation frequency, saves final checkpoints, then runs posthoc analysis.
+evaluation frequency, saves final checkpoints, then runs posthoc analysis. The
+default methods are the core comparison only: `identity-hc mhc isohc`.
 
-Run a checkpointed 48L mechanism set:
-
-```bash
-cd /root/isoHC
-RESULT_ROOT=/root/autodl-tmp/isoHC/results/0525_mech_ckpt_48l \
-PRESET=fe-deep-48l-512 \
-TOTAL_TOKENS=20000000 \
-MEMORY_TARGET_GB=30 \
-NUM_WORKERS=4 \
-PREFETCH_FACTOR=4 \
-bash experiments/run_0525_fe_fair_deep.sh
-```
-
-For this checkpointed run, remove `--no_save_checkpoints` from the shell script or run the Python command directly with:
+If a targeted rerun is needed, run the Python command directly:
 
 ```bash
 /root/miniconda3/bin/python3 -u experiments/lm_5090_next_runs.py \
   --preset fe-deep-48l-512 \
-  --methods identity-hc mhc isohc fixed-vector-spectral-hc \
+  --methods identity-hc mhc isohc \
   --dataset fineweb-edu \
   --output_dir /root/autodl-tmp/isoHC/results/0525_mech_ckpt_48l \
   --total_tokens 20000000 \
@@ -124,13 +112,18 @@ For this checkpointed run, remove `--no_save_checkpoints` from the shell script 
   --vocab_size 50257 \
   --fair_auto_batch \
   --memory_target_gb 30 \
-  --compile_mode max-autotune \
-  --num_workers 4 \
-  --prefetch_factor 4 \
+  --compile_mode reduce-overhead \
+  --num_workers 8 \
+  --prefetch_factor 8 \
+  --eval_every_tokens 1000000000 \
+  --eval_max_batches 8 \
+  --no_save_best_checkpoints \
   --require_cuda
 ```
 
-Expected time on 5090: roughly 60-90 minutes for four 48L methods at 20M tokens, plus compile/probe overhead. Disk cost is several GB for checkpoints, on data disk only.
+Expected time on 5090: roughly 45-80 minutes for three 48L methods at 20M
+tokens, plus compile/probe overhead. Disk cost is several GB for checkpoints,
+on data disk only.
 
 ## Step 2: Posthoc Mechanism Analysis
 
@@ -142,7 +135,6 @@ After Step 1:
     /root/autodl-tmp/isoHC/results/0525_mech_ckpt_48l/fe-deep-48l-512_identity-hc_seed0 \
     /root/autodl-tmp/isoHC/results/0525_mech_ckpt_48l/fe-deep-48l-512_mhc_seed0 \
     /root/autodl-tmp/isoHC/results/0525_mech_ckpt_48l/fe-deep-48l-512_isohc_seed0 \
-    /root/autodl-tmp/isoHC/results/0525_mech_ckpt_48l/fe-deep-48l-512_fixed-vector-spectral-hc_seed0 \
   --output_dir /root/autodl-tmp/isoHC/results/0525_mech_ckpt_48l/posthoc \
   --dataset fineweb-edu \
   --val_cache_path /root/autodl-tmp/isoHC/data/lm_cache/HuggingFaceFW__fineweb-edu__sample-10BT_train_heldout_ctx512.pt \
@@ -156,7 +148,6 @@ Primary figures/tables from this step:
 - gradient profile slope: mHC should show stronger attenuation if contraction matters
 - complement removal: IsoHC should have larger `delta_loss` if its preserved complement is useful
 - IsoHC->identity: positive `delta_loss` means learned rotation matters
-- fixed-vector spectral: tests whether "non-expansive" is enough without isometry
 
 ## Step 3: Seed Robustness
 
@@ -166,7 +157,7 @@ Run 48L 20M tokens for two more seeds:
 for SEED in 1 2; do
   /root/miniconda3/bin/python3 -u experiments/lm_5090_next_runs.py \
     --preset fe-deep-48l-512 \
-    --methods identity-hc unconstrained mhc isohc fixed-vector-spectral-hc \
+    --methods identity-hc unconstrained mhc isohc \
     --dataset fineweb-edu \
     --output_dir /root/autodl-tmp/isoHC/results/0525_fe48_seeds \
     --total_tokens 20000000 \
@@ -176,9 +167,9 @@ for SEED in 1 2; do
     --vocab_size 50257 \
     --fair_auto_batch \
     --memory_target_gb 30 \
-    --compile_mode max-autotune \
-    --num_workers 4 \
-    --prefetch_factor 4 \
+    --compile_mode reduce-overhead \
+    --num_workers 8 \
+    --prefetch_factor 8 \
     --no_save_checkpoints \
     --require_cuda
 done
@@ -194,7 +185,7 @@ Run:
 
 ```text
 L in {24, 48, 72}
-methods: identity-hc, mhc, isohc, fixed-vector-spectral-hc, unconstrained
+methods: identity-hc, mhc, isohc, unconstrained
 tokens: 20M
 ```
 
@@ -237,7 +228,7 @@ Do not spend expensive GPU time on 100M+ if:
 
 - IsoHC->identity has near-zero `delta_loss`
 - complement removal has near-zero `delta_loss`
-- fixed-vector spectral matches IsoHC on all mechanism and outcome metrics
+- identity-HC matches IsoHC under replacement and intervention tests
 
 In that case the correct claim is narrower:
 

@@ -10,10 +10,9 @@ import torch.nn.functional as F
 from lm.diagnostics import compute_head_output_stats
 from lm.data import create_dataloader, save_token_cache, TokenizedTextDataset
 from lm.headmix import HeadOutputMixing
-from lm.mixing import create_mixing
 from lm.models import CausalSelfAttention, TwoBranchHCTransformer
 from lm.train import run_experiment
-from lm.transport_analysis import collect_transport_report, complement_spectrum
+from lm.transport_analysis import collect_transport_report
 from experiments.lm_5090_next_runs import build_preset_configs, create_model
 
 
@@ -163,21 +162,6 @@ class LMNextPhaseContractTests(unittest.TestCase):
         self.assertEqual(len(states), 1 + 2 * model.num_layers)
         self.assertEqual(states[0].shape, (4, 2, 16, 48))
 
-    def test_spectral_mixing_baselines_expose_missing_isometry_control(self):
-        torch.manual_seed(17)
-        spectral = create_mixing(4, "spectral", init_scale=0.7)
-        H_spectral = spectral()
-        self.assertLessEqual(torch.linalg.svdvals(H_spectral.float()).max().item(), 1.0001)
-
-        fixed_vector = create_mixing(4, "fixed-vector-spectral", init_scale=0.7)
-        H_fixed = fixed_vector()
-        ones = torch.ones(4, 1)
-        spec = complement_spectrum(H_fixed)
-
-        self.assertLess(torch.norm(H_fixed @ ones - ones).item(), 1e-5)
-        self.assertLessEqual(spec["sv_max"], 1.0001)
-        self.assertIn("fix_error", fixed_vector.get_diagnostics())
-
     def test_transport_report_tracks_composite_complement_gain(self):
         eye = torch.eye(4)
         identity_report = collect_transport_report([
@@ -298,18 +282,18 @@ class LMNextPhaseContractTests(unittest.TestCase):
         self.assertIsInstance(model, TwoBranchHCTransformer)
         self.assertEqual(model.mixing_type, "identity")
 
-    def test_spectral_hc_methods_are_available_to_experiment_runner(self):
+    def test_spectral_hc_methods_are_not_in_main_experiment_runner(self):
         configs = build_preset_configs(
             preset="run0",
             methods=["spectral-hc", "fixed-vector-spectral-hc"],
             output_dir="outputs/test",
             batch_size=2,
         )
-        spectral = create_model(configs[0], vocab_size=128, device=torch.device("cpu"))
-        fixed = create_model(configs[1], vocab_size=128, device=torch.device("cpu"))
 
-        self.assertEqual(spectral.mixing_type, "spectral")
-        self.assertEqual(fixed.mixing_type, "fixed-vector-spectral")
+        with self.assertRaises(ValueError):
+            create_model(configs[0], vocab_size=128, device=torch.device("cpu"))
+        with self.assertRaises(ValueError):
+            create_model(configs[1], vocab_size=128, device=torch.device("cpu"))
 
     def test_run_experiment_respects_gradient_accumulation_steps(self):
         class TinyLM(nn.Module):

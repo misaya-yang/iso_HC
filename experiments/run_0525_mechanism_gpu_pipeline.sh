@@ -18,7 +18,7 @@ PREFETCH_FACTOR="${PREFETCH_FACTOR:-8}"
 PRESET="${PRESET:-fe-deep-48l-512}"
 EVAL_EVERY_TOKENS="${EVAL_EVERY_TOKENS:-1000000000}"
 EVAL_MAX_BATCHES="${EVAL_MAX_BATCHES:-8}"
-METHODS="${METHODS:-identity-hc mhc isohc fixed-vector-spectral-hc}"
+METHODS="${METHODS:-identity-hc mhc isohc}"
 
 if [[ -z "${PYTHON_BIN:-}" ]]; then
   if [[ -x /root/miniconda3/bin/python3 ]]; then

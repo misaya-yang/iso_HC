@@ -193,13 +193,9 @@ def create_model(config, vocab_size, device):
         "mhc",
         "isohc",
         "orthogonal",
-        "spectral-hc",
-        "fixed-vector-spectral-hc",
     ):
         mixing_type = {
             "identity-hc": "identity",
-            "spectral-hc": "spectral",
-            "fixed-vector-spectral-hc": "fixed-vector-spectral",
         }.get(method, method)
         model = TwoBranchHCTransformer(
             vocab_size=vocab_size,

@@ -218,18 +218,21 @@ ResGCN L16: variance=4.91 但 accuracy=30.0%。
 | 核心投影 | `isohc/projection.py` | iso_ns_project, construct_orthogonal_complement, NS polar |
 | HC layers | `isohc/layers.py` | RMSNorm, Attention, MLP, IsoHCResidualMixing |
 | HC Transformer | `isohc/transformer.py` | Baseline, IsoHC, UnconstrainedHC (Tiny scale) |
-| **LM 模型** | **`lm/models.py`** | **BaselineTransformer, HCTransformer (125M scale)** |
+| **LM 模型** | **`lm/models.py`** | **BaselineTransformer, TwoBranchHCTransformer** |
 | **LM Mixing** | **`lm/mixing.py`** | **Identity, Unconstrained, Orthogonal, IsoHC, mHC mixing** |
-| **LM 数据** | **`lm/data.py`** | **TinyStories, WikiText-103 data loader** |
+| **LM 数据** | **`lm/data.py`** | **Token cache / random / HF-backed data loader** |
 | **LM 训练** | **`lm/train.py`** | **统一训练循环 + 诊断** |
 | **LM 诊断** | **`lm/diagnostics.py`** | **mean-zero energy, stream cosine, gradient profile** |
+| **LM 主入口** | **`experiments/lm_5090_next_runs.py`** | **当前 5090 FE runner** |
+| **LM GPU 流水线** | **`experiments/run_0525_mechanism_gpu_pipeline.sh`** | **当前正式服务器启动脚本** |
+| **LM posthoc** | **`experiments/analyze_lm_mechanisms.py`** | **composite gain / gradient / intervention 分析** |
 | GNN 模型 | `gnn/models.py` | GCN, ResGCN, IsoStreamGCN v2, IsoResGCN, PairNormGCN |
 | GNN 投影 | `gnn/projection.py` | IsoNodeProjection (fp64 U) |
 | GNN 工具 | `gnn/utils.py` | v-centered variance, invariant error |
 | GNN 实验 | `experiments/gnn_stage1_*.py` | Synthetic, Cora, Ablation |
-| **LM Phase 0** | **`experiments/lm_phase0_smoke.py`** | **5M tokens smoke test** |
-| **LM Phase 1** | **`experiments/lm_phase1_controlled.py`** | **50M tokens controlled** |
-| **LM 验证** | **`experiments/lm_verify.py`** | **Forward/backward 正确性检查** |
+
+旧的 `lm_phase0_smoke.py`、`lm_phase1_controlled.py`、`lm_verify.py`、FE
+overnight shell、TinyShakespeare real-text grid 脚本已删除，避免误跑旧评测。
 
 ---
 
