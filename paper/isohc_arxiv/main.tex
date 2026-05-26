@@ -1,0 +1,651 @@
+\documentclass[10pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{pgfplots}
+\usepackage{hyperref}
+
+\pgfplotsset{compat=1.18}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{remark}{Remark}
+
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Birk}{\mathcal{B}_n}
+\newcommand{\Mone}{\mathcal{M}_{\one}}
+\newcommand{\pperp}{P_{\perp}}
+\newcommand{\operp}{\one^{\perp}}
+\newcommand{\Eperp}{E_{\perp}}
+\newcommand{\sv}{\sigma}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\polar}{polar}
+\DeclareMathOperator{\rank}{rank}
+
+\title{
+Birkhoff Stability Is Not Isometric Stability:\\
+Fixed-Vector Residual Transport for Hyper-Connections
+}
+
+\author{
+Author information to be finalized
+}
+
+\date{May 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Hyper-Connections expand residual connections into multiple residual streams,
+making residual transport itself a learnable geometric object.  This creates a
+final-mile problem for residual architectures: unconstrained multi-stream
+transport is expressive but can destroy the identity mapping and amplify signals
+through depth, while Birkhoff-constrained transport, as used in
+manifold-constrained Hyper-Connections (mHC), restores the residual mean but can
+dissipate the mean-zero stream complement.  We study this gap and propose
+IsoHC, a fixed-vector isometric residual transport constraint
+$H^\top H=I,\ H\one=\one$.  IsoHC preserves the residual mean exactly while
+keeping every singular value on $\operp$ equal to one.  We show theoretically
+that mean preservation does not imply complement preservation: doubly stochastic
+transport can be perfectly stable in the residual mean direction while
+contracting $\operp$ exponentially through depth.  In residual-only detectors,
+unconstrained transport explodes, Birkhoff-like diffusion collapses the
+mean-zero energy, and IsoHC preserves gradients, energy, and stream diversity
+through 1024 layers.  In a 48-layer FineWeb-Edu Transformer posthoc analysis,
+mHC's composite mean-zero transport gain falls to $4.39\times10^{-4}$, whereas
+IsoHC remains near $0.996$.  At the current compute scale, we do not claim a
+decisive language-modeling perplexity improvement.  Instead, we identify and
+repair a concrete residual-transport pathology: preserving the residual mean is
+not sufficient for preserving multi-stream residual information.
+\end{abstract}
+
+\section{Introduction}
+
+Residual connections stabilize deep neural networks by preserving an identity
+path.  A standard residual block can be abstracted as
+\begin{equation}
+    x_{l+1}=x_l+F_l(x_l),
+\end{equation}
+so that each layer writes an increment into a persistent residual state.
+Pre-normalized Transformers inherit this design: attention and MLP branches read
+from a shared residual stream and add updates back into it.  This identity path
+is one of the main reasons very deep networks can be optimized.
+
+Hyper-Connections (HC) generalize this paradigm by replacing the single
+residual stream with multiple residual streams and a learnable transport between
+them~\cite{hyperconnections}.  This turns the residual pathway from a scalar
+identity channel into a structured multi-stream transport system.  However, it
+also makes the residual connection itself a geometric object.  A generic learned
+transport matrix may amplify, collapse, or drift away from the residual identity
+semantics, and products of such matrices can become unstable through depth.
+
+mHC repairs this instability by projecting residual mixing matrices onto the
+Birkhoff polytope~\cite{mhc}:
+\begin{equation}
+    \Birk=\{H\in\R^{n\times n}:H\one=\one,\ \one^\top H=\one^\top,\ H\ge 0\}.
+\end{equation}
+This is a natural stabilization: doubly stochastic transport preserves the
+uniform stream mean, restoring the identity-mapping property that residual
+connections are meant to provide.  Recent work has further improved this line
+through alternative parameterizations and spectral constraints
+~\cite{shc,kromhc}.
+
+Our observation is that mean preservation is not the same as residual-complement
+preservation.  Let
+\begin{equation}
+    \pperp = I - \frac{1}{n}\one\one^\top
+\end{equation}
+be the projection onto the mean-zero stream subspace $\operp$.  In a
+multi-stream residual architecture, the stream mean carries the ordinary
+identity path, while $\pperp X$ carries the differences between streams.  If
+these differences are intended to store persistent residual information, then a
+residual transport geometry should not only preserve the mean; it should also
+avoid dissipating the complement.
+
+Birkhoff geometry does not guarantee this.  A doubly stochastic matrix is
+non-expansive, but it is generally diffusive.  It can make all standard
+mean-direction stability diagnostics look healthy while exponentially
+contracting $\operp$.  We call this distinction:
+\begin{center}
+\emph{Birkhoff stability is not isometric stability.}
+\end{center}
+
+We propose IsoHC, a fixed-vector isometric constraint for residual transport:
+\begin{equation}
+    \Mone = \{Q\in O(n):Q\one=\one\}.
+\end{equation}
+IsoHC preserves the residual mean exactly and acts orthogonally on
+$\operp$.  It therefore avoids both unconstrained amplification and
+Birkhoff-style diffusion.  The contribution of this note is not a claim of
+large-scale language-modeling superiority.  Rather, it is a mechanism diagnosis
+and repair: mHC protects the residual mean, but it can dissipate the residual
+complement; fixed-vector isometry protects both.
+
+\paragraph{Contributions.}
+We make four contributions.
+\begin{enumerate}
+    \item We formulate the residual-complement gap in multi-stream residual
+    transport: preserving the stream mean does not preserve the full residual
+    transport geometry.
+    \item We prove that Birkhoff constraints can hide depth-wise contraction on
+    $\operp$, even when mean-direction stability is exact.
+    \item We derive IsoHC as the fixed-vector orthogonal stabilizer that
+    preserves both the residual mean and the complement norm.
+    \item We provide controlled evidence from residual-only detectors, graph
+    oversmoothing experiments, and 48-layer Transformer posthoc analysis.
+\end{enumerate}
+
+\section{Multi-Stream Residual Transport}
+
+Let $X_l\in\R^{n\times d}$ denote $n$ residual streams at layer $l$.  A generic
+multi-stream residual update can be written as
+\begin{equation}
+    X_{l+1}=H_lX_l+b_l\otimes y_l,
+\end{equation}
+where $H_l\in\R^{n\times n}$ transports the streams and $y_l\in\R^d$ is the
+branch output.  The stream mean is
+\begin{equation}
+    \mu(X)=\frac{1}{n}\one^\top X.
+\end{equation}
+To embed the standard residual path into the mean stream, we want
+\begin{equation}
+    \mu(X_{l+1})=\mu(X_l)+y_l.
+\end{equation}
+This is satisfied if
+\begin{equation}
+    \one^\top H_l=\one^\top,\qquad \frac{1}{n}\one^\top b_l=1.
+\end{equation}
+
+Every stream state decomposes as
+\begin{equation}
+    X=\one\otimes\mu(X)+\pperp X.
+\end{equation}
+The first term is the residual mean.  The second term is the residual
+complement, where the additional degrees of freedom of a multi-stream residual
+architecture live.  This gives two distinct requirements:
+\begin{align}
+    \text{mean direction:} &\quad \text{preserve the residual identity path},\\
+    \text{mean-zero complement:} &\quad \text{transport stream differences without
+    expansion or dissipation}.
+\end{align}
+mHC solves the first requirement by using Birkhoff constraints.  IsoHC targets
+both.
+
+\section{Birkhoff Stability Versus Complement Preservation}
+
+Let $U\in\R^{n\times(n-1)}$ be an orthonormal basis of $\operp$, so that
+$U^\top U=I$ and $U^\top\one=0$.  The complement action of a mean-preserving
+matrix $H$ is
+\begin{equation}
+    H_\perp = U^\top H U.
+\end{equation}
+
+\begin{theorem}[Birkhoff transport is non-expansive, not necessarily isometric]
+\label{thm:birkhoff-nonexpansive}
+If $H\in\Birk$, then $H$ preserves the stream mean and
+\begin{equation}
+    \|U^\top H U\|_2 \le 1.
+\end{equation}
+However, Birkhoff constraints do not imply that $U^\top H U$ has singular
+values equal to one.
+\end{theorem}
+
+\begin{proof}
+By the Birkhoff-von Neumann theorem, $H$ is a convex combination of permutation
+matrices:
+\begin{equation}
+    H=\sum_k \alpha_k P_k,\qquad \alpha_k\ge 0,\quad \sum_k\alpha_k=1.
+\end{equation}
+Each $P_k$ is orthogonal, hence $\|P_k\|_2=1$.  Therefore
+\begin{equation}
+    \|H\|_2 \le \sum_k\alpha_k\|P_k\|_2 = 1.
+\end{equation}
+Since $H\one=\one$ and $\one^\top H=\one^\top$, the subspace $\operp$ is
+invariant under $H$, and the restriction $U^\top H U$ is also non-expansive.
+Non-expansiveness does not force all singular values to equal one.
+\end{proof}
+
+\begin{theorem}[Mean stability can hide exponential complement contraction]
+\label{thm:halpha}
+For $0\le \alpha<1$, define
+\begin{equation}
+    H_\alpha = \alpha I + (1-\alpha)\frac{\one\one^\top}{n}.
+\end{equation}
+Then $H_\alpha\in\Birk$, $H_\alpha\one=\one$, and for any
+$x\in\operp$,
+\begin{equation}
+    H_\alpha x = \alpha x.
+\end{equation}
+Consequently,
+\begin{equation}
+    \|\pperp H_\alpha^L\pperp x\|_2
+    =
+    \alpha^L \|\pperp x\|_2.
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+$H_\alpha$ is nonnegative for $0\le\alpha<1$, and its rows and columns sum to
+one, so $H_\alpha\in\Birk$.  If $x\in\operp$, then $\one^\top x=0$ and
+$\one\one^\top x/n=0$.  Thus $H_\alpha x=\alpha x$, and the depth-$L$ statement
+follows by repeated application.
+\end{proof}
+
+Theorem~\ref{thm:halpha} is the core counterexample: row/column stochasticity can
+be perfect while complement information decays exponentially.  This is not a
+bug in mHC.  mHC is designed to restore identity stability.  The point is that
+identity stability alone does not certify multi-stream complement preservation.
+
+\section{IsoHC: Fixed-Vector Isometric Transport}
+
+IsoHC replaces Birkhoff residual transport with the fixed-vector orthogonal
+stabilizer
+\begin{equation}
+    \Mone=\{Q\in O(n):Q\one=\one\}.
+\end{equation}
+
+\begin{theorem}[Fixed-vector isometry preserves mean and complement norm]
+\label{thm:isohc}
+Let $Q\in\Mone$.  Then for any $X\in\R^{n\times d}$,
+\begin{equation}
+    \mu(QX)=\mu(X),
+\end{equation}
+and
+\begin{equation}
+    \|\pperp QX\|_F=\|\pperp X\|_F.
+\end{equation}
+Equivalently, all singular values of $U^\top Q U$ are one.
+\end{theorem}
+
+\begin{proof}
+Since $Q^\top Q=I$ and $Q\one=\one$, we also have $Q^\top\one=\one$.  Hence
+\begin{equation}
+    \mu(QX)=\frac{1}{n}\one^\top QX=\frac{1}{n}\one^\top X=\mu(X).
+\end{equation}
+The subspace $\operp$ is invariant under $Q$, and the restriction
+$U^\top Q U$ is orthogonal.  Therefore it preserves the Frobenius norm of the
+complement.
+\end{proof}
+
+\begin{proposition}[Nonnegative orthogonal stochastic matrices are discrete]
+\label{prop:permutation}
+If $Q\ge 0$, $Q\one=\one$, and $Q^\top Q=I$, then $Q$ is a permutation matrix.
+\end{proposition}
+
+\begin{proof}
+The rows of $Q$ are nonnegative unit vectors with pairwise inner product zero.
+Thus distinct rows have disjoint support.  Since each row sums to one and has
+unit Euclidean norm, each row has exactly one nonzero entry, equal to one.
+Column orthogonality then implies that each column has exactly one such entry.
+\end{proof}
+
+This proposition explains why continuous non-diffusive residual transport must
+leave the nonnegative Birkhoff geometry.  If we require nonnegativity,
+stochasticity, and orthogonality simultaneously, the feasible set degenerates to
+permutations.
+
+\subsection{Projection and finite-step retraction}
+
+Let $v=\one/\sqrt{n}$ and let $U$ span $v^\perp$.  Every element of $\Mone$ has
+the form
+\begin{equation}
+    Q = vv^\top + U R U^\top,\qquad R\in O(n-1).
+\end{equation}
+Given an unconstrained matrix $A$, the Frobenius-nearest exact projection, away
+from polar degeneracies, is
+\begin{equation}
+    \Pi_v(A)=vv^\top + U\,\polar(U^\top A U)\,U^\top.
+\end{equation}
+In implementation, we use a finite-step Newton-Schulz polar iteration as an
+efficient fixed-vector retraction:
+\begin{equation}
+    B=U^\top A U,\qquad R_K\approx \polar(B),\qquad Q_K=vv^\top+UR_KU^\top.
+\end{equation}
+The finite-step retraction preserves the fixed vector by construction, but
+orthogonality is approximate and must be monitored.  In our 48-layer run,
+IsoHC's fixed-vector error is $2.79\times10^{-7}$ and its orthogonality error is
+$5.57\times10^{-4}$.
+
+\section{Experimental Evidence}
+
+The experiments are designed to test residual transport geometry, not to claim
+language-modeling state of the art.  The central question is:
+\begin{quote}
+Does the transport preserve both the residual mean and the residual complement
+through depth?
+\end{quote}
+
+\subsection{Residual-only depth detector}
+
+We first remove attention and MLP branches and study pure transport through up
+to 1024 layers.  Table~\ref{tab:detector} shows the $n=8$, $L=1024$ detector.
+
+\begin{table}[t]
+\centering
+\caption{Residual-only transport detector at $n=8$, $L=1024$.  IsoHC preserves
+gradient scale, mean-zero energy, and stream diversity.  Diffusive transport
+collapses the complement, while unconstrained transport explodes.}
+\label{tab:detector}
+\begin{tabular}{lrrrrr}
+\toprule
+method & grad mean & mean-zero energy & stream cosine & $\sigma_{\min}$ & $\sigma_{\max}$ \\
+\midrule
+IsoHC & 1.0000 & 1.0000 & 0.0250 & 1.0000 & 1.0000 \\
+mHC-lite & 0.3536 & 0.0000 & 1.0000 & 0.5724 & 1.0000 \\
+GCN diffusion & 0.3533 & 0.0000 & 1.0000 & 0.8000 & 1.0000 \\
+unconstrained & $5.58{\times}10^{13}$ & $5.61{\times}10^{13}$ & 0.9877 & 0.4270 & 1.6155 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The detector isolates the geometry.  Unconstrained HC can amplify through depth;
+Birkhoff-like diffusion prevents explosion but collapses the complement; IsoHC
+preserves the complement isometrically.
+
+\subsection{48-layer FineWeb-Edu mechanism run}
+
+We trained a 48-layer GPT-style Transformer on a FineWeb-Edu token cache:
+\begin{equation}
+    L=48,\quad d_{\mathrm{model}}=512,\quad h=8,\quad n=4,\quad T=512,
+\end{equation}
+for 20M tokens per method.  The model has roughly 177M parameters.  A fair batch
+probe selected a common batch size across methods.
+
+\begin{table}[t]
+\centering
+\caption{48-layer FineWeb-Edu short-budget run.  Perplexity differences are not
+the main claim.  The key observation is that mHC reduces $\Eperp$, while IsoHC
+preserves much larger complement energy.}
+\label{tab:fe48}
+\begin{tabular}{lrrrr}
+\toprule
+method & val loss & val PPL & $\Eperp$ init $\to$ final & stream cosine init $\to$ final \\
+\midrule
+baseline & 5.7366 & 310.01 & -- & -- \\
+identity-HC & 5.7157 & 303.60 & 0.0222 $\to$ 0.0503 & 0.9993 $\to$ 0.9971 \\
+unconstrained HC & 5.6760 & 291.78 & 0.0222 $\to$ 0.0547 & 0.9993 $\to$ 1.0000 \\
+mHC & 5.7249 & 306.39 & 0.0224 $\to$ 0.0136 & 0.9993 $\to$ 0.9998 \\
+IsoHC & 5.7206 & 305.10 & 0.0224 $\to$ 0.0546 & 0.9993 $\to$ 0.9967 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Single-layer transport diagnostics in the 48-layer run.  mHC satisfies
+stochastic constraints but has average complement singular value near 0.922.
+IsoHC keeps the fixed vector and complement singular values near one.}
+\label{tab:diagnostics}
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llll}
+\toprule
+method & invariant error & orthogonality error & $\operp$ singular values \\
+\midrule
+identity-HC & 0.0 & 0.0 & exact identity \\
+unconstrained HC & 0.1050 & 0.1694 & unconstrained \\
+mHC & row 0.0046 / col $2.30{\times}10^{-7}$ & -- & mean 0.9222, min 0.9208, max 0.9237 \\
+IsoHC & $2.79{\times}10^{-7}$ & $5.57{\times}10^{-4}$ & mean 0.99996, min 0.99982, max 1.00012 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.92\linewidth,
+    height=0.38\linewidth,
+    xlabel={transport index},
+    ylabel={single-layer mean $\sigma(U^\top H_l U)$},
+    ymin=0.90,
+    ymax=1.02,
+    legend pos=south east,
+    grid=both,
+    grid style={gray!20},
+]
+\addplot[blue, thick] table[x=index,y=sv_mean,col sep=comma] {data/mhc_single_spectrum.csv};
+\addlegendentry{mHC}
+\addplot[red, thick] table[x=index,y=sv_mean,col sep=comma] {data/isohc_single_spectrum.csv};
+\addlegendentry{IsoHC}
+\end{axis}
+\end{tikzpicture}
+\caption{Single-layer complement singular values in the 48-layer Transformer.
+mHC is consistently contractive on $\operp$, while IsoHC remains near one.}
+\label{fig:single-spectrum}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{semilogyaxis}[
+    width=0.92\linewidth,
+    height=0.42\linewidth,
+    xlabel={transport index},
+    ylabel={composite mean $\sigma(U^\top H_{1:l}U)$},
+    ymin=1e-4,
+    ymax=2,
+    legend pos=south west,
+    grid=both,
+    grid style={gray!20},
+]
+\addplot[blue, thick] table[x=index,y=composite_sv_mean,col sep=comma] {data/mhc_composite_gain.csv};
+\addlegendentry{mHC}
+\addplot[red, thick] table[x=index,y=composite_sv_mean,col sep=comma] {data/isohc_composite_gain.csv};
+\addlegendentry{IsoHC}
+\end{semilogyaxis}
+\end{tikzpicture}
+\caption{Composite complement transport gain.  At the final transport,
+mHC falls to $4.39\times 10^{-4}$, whereas IsoHC remains near $0.996$.  This
+is the central mechanism result: mean-preserving stability does not certify
+complement-preserving transport.}
+\label{fig:composite}
+\end{figure}
+
+\subsection{Checkpoint posthoc intervention}
+
+We further analyzed checkpointed mHC and IsoHC runs using 16 validation batches
+with batch size 1 for intervention and gradient probes.
+
+\begin{table}[t]
+\centering
+\caption{48-layer checkpoint posthoc analysis.  The transport pathology is
+strong, but functional loss deltas are small at this budget.}
+\label{tab:posthoc}
+\begin{tabular}{lrrrrr}
+\toprule
+method & val loss & PPL & final composite $\operp$ gain & best removal $\Delta L$ & replace by identity $\Delta L$ \\
+\midrule
+mHC & 5.900727 & 365.30 & 0.000439 & 0.000289 & -0.000524 \\
+IsoHC & 5.901274 & 365.50 & 0.996349 & 0.000516 & 0.000713 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The posthoc result is the cleanest Transformer mechanism evidence: mHC's
+composite complement transport nearly vanishes, while IsoHC remains isometric.
+However, complement-removal and IsoHC-to-identity replacement change average
+validation loss only at the $10^{-4}$ to $10^{-3}$ scale.  This means the current
+run establishes the transport pathology, but does not yet show that the
+preserved complement is strongly used by the language model.
+
+\subsection{Graph oversmoothing side evidence}
+
+Graph neural networks provide an additional stress test for diffusion.  In a
+synthetic oversmoothing experiment at depth 128, ordinary diffusion collapses
+node variation, while an isometric transport preserves it:
+
+\begin{table}[t]
+\centering
+\caption{Synthetic graph oversmoothing stress test at depth 128.}
+\label{tab:gnn}
+\begin{tabular}{lrrrr}
+\toprule
+method & energy & centered variance & cosine & Dirichlet energy \\
+\midrule
+GCN & 0.2003 & 0.0012 & 1.0000 & 0.0000 \\
+Residual GCN & 0.2003 & 0.0012 & 1.0000 & 0.0000 \\
+IsoNode & 1.0000 & 1.0000 & 0.0325 & 7940.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+On Cora node classification, a corrected stream architecture recovers deep
+performance where ordinary GCNs collapse:
+\begin{table}[t]
+\centering
+\caption{Cora deep node classification.  This is side evidence for the
+anti-collapse role of isometric stream transport, not the main LM claim.}
+\label{tab:cora}
+\begin{tabular}{lccc}
+\toprule
+model & L2 & L16 & L32 \\
+\midrule
+GCN & $77.6\pm1.9$ & $31.1\pm0.2$ & $31.2\pm0.3$ \\
+ResGCN & $75.8\pm1.2$ & $28.8\pm4.0$ & $28.6\pm2.8$ \\
+IsoStream v2 & -- & $73.1\pm1.9$ & $66.6\pm3.4$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion}
+
+\paragraph{What IsoHC solves.}
+IsoHC should not be read as a small-model perplexity trick.  It targets residual
+transport geometry.  Ordinary residual connections provide a stable identity
+path but only one residual transport channel.  HC adds multiple streams, but
+unconstrained transport can destabilize the identity path.  mHC restores the
+mean identity path with Birkhoff geometry.  IsoHC completes this geometry by
+also preserving the residual complement.
+
+\paragraph{Why not just identity-HC?}
+The identity matrix is a member of $\Mone$ and preserves both mean and
+complement.  It is therefore an essential control.  IsoHC's additional value is
+learnable non-destructive stream communication: $U^\top H_lU$ can be a nontrivial
+orthogonal transform rather than the identity.  Our current LM replacement probe
+shows only a small IsoHC-to-identity loss delta, so the present evidence verifies
+the geometry but does not yet demonstrate strong functional value of learned
+rotations over identity-HC.
+
+\paragraph{Relation to spectral HC.}
+Spectral constraints such as $\|H\|_2\le 1$ prevent expansion but do not by
+themselves guarantee residual mean preservation or complement isometry.  IsoHC
+imposes the stronger geometry
+\begin{equation}
+    H\one=\one,\qquad H^\top H=I,
+\end{equation}
+which simultaneously preserves the residual mean and all complement singular
+values.  Thus the distinction is not simply signed versus nonnegative mixing,
+but non-expansive versus isometric transport on the invariant complement.
+
+\section{Limitations}
+
+This note intentionally makes a limited claim.
+\begin{enumerate}
+    \item We do not show decisive large-scale LM perplexity improvements over
+    mHC or spectral HC variants.
+    \item The current LM complement-intervention effects are small, so
+    functional use of the preserved complement remains weak at this scale.
+    \item Identity-HC remains a strong control.  Future work must show when
+    learned isometric stream mixing is more useful than no mixing.
+    \item IsoHC gives fixed-vector isometry for the residual transport
+    component, not full dynamical isometry of an entire Transformer block.
+    \item Finite-step Newton-Schulz retractions are approximate; fixed-vector
+    error and orthogonality error must be monitored.
+\end{enumerate}
+
+\section{Future Work}
+
+The next experiments should test whether the preserved complement is
+functionally used, rather than merely energetically preserved.
+
+\paragraph{Token-level intervention.}
+For each token, compare full logits $p_t$ with intervention logits $p'_t$ after
+complement removal or complement clamping:
+\begin{equation}
+    D_{\mathrm{KL}}(p_t\|p'_t),\qquad
+    \Delta\ell_t = -\log p'_t(y_t)+\log p_t(y_t).
+\end{equation}
+The average loss delta may be small even if high-entropy, rare, late-position,
+or copy-sensitive tokens depend on the complement.
+
+\paragraph{Complement clamp and gate sweeps.}
+Instead of removing the complement at one layer, clamp it from layer $k$ onward:
+\begin{equation}
+    X_l\leftarrow \one\mu(X_l),\qquad l\ge k,
+\end{equation}
+or sweep
+\begin{equation}
+    X_l^{(\alpha)}=\one\mu(X_l)+\alpha\pperp X_l,\qquad
+    \alpha\in\{0,0.25,0.5,0.75,1\}.
+\end{equation}
+Monotonic sensitivity to $\alpha$ would provide a stronger causal bridge.
+
+\paragraph{Deep-thin stress and routing tasks.}
+Depth is the natural axis for a contraction claim.  Future work should run
+48/72/96/128-layer deep-thin models and synthetic routing or associative recall
+tasks that require cross-stream communication.  These settings can test whether
+learned isometric mixing is functionally necessary and whether mHC's complement
+contraction limits behavior.
+
+\section{Conclusion}
+
+Hyper-Connections make residual transport multi-stream.  mHC restores the
+residual mean by imposing Birkhoff constraints, but preserving the mean is not
+the same as preserving the full residual transport geometry.  Birkhoff transport
+is non-expansive and can be strongly contractive on the mean-zero complement.
+IsoHC imposes fixed-vector isometry, preserving both the residual mean and the
+complement norm.  The current evidence supports IsoHC as a geometric mechanism:
+mHC's composite complement transport collapses in depth, while IsoHC remains
+approximately isometric.  The remaining open question is functional relevance:
+when, and at what scale, does the preserved residual complement become necessary
+for model behavior?
+
+\begin{thebibliography}{9}
+
+\bibitem{resnet}
+K. He, X. Zhang, S. Ren, and J. Sun.
+\newblock Deep Residual Learning for Image Recognition.
+\newblock In \emph{CVPR}, 2016.
+
+\bibitem{transformer}
+A. Vaswani et al.
+\newblock Attention Is All You Need.
+\newblock In \emph{NeurIPS}, 2017.
+
+\bibitem{hyperconnections}
+D. Zhu, H. Huang, Z. Huang, Y. Zeng, Y. Mao, B. Wu, Q. Min, and X. Zhou.
+\newblock Hyper-Connections.
+\newblock arXiv:2409.19606, 2024.
+
+\bibitem{mhc}
+Z. Xie et al.
+\newblock mHC: Manifold-Constrained Hyper-Connections.
+\newblock arXiv:2512.24880, 2025.
+
+\bibitem{shc}
+Z. Liu, H. Zhang, and A. Li.
+\newblock Beyond the Birkhoff Polytope: Spectral-Sphere-Constrained Hyper-Connections.
+\newblock arXiv:2603.20896, 2026.
+
+\bibitem{kromhc}
+W. Zhou, Y. Gu, G. Iacovides, and D. Mandic.
+\newblock KromHC: Manifold-Constrained Hyper-Connections with Kronecker-Product Residual Matrices.
+\newblock arXiv:2601.21579, 2026.
+
+\bibitem{pairnorm}
+L. Zhao and L. Akoglu.
+\newblock PairNorm: Tackling Oversmoothing in GNNs.
+\newblock In \emph{ICLR}, 2020.
+
+\end{thebibliography}
+
+\end{document}
