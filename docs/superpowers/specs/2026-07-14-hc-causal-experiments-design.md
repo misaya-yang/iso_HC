@@ -25,7 +25,7 @@ The source guidance spans four independently reviewable projects. Combining them
 | --- | --- | --- | --- |
 | P0: causal controls | Is the observed contraction caused by static Birkhoff initialization, training, or contraction itself? | Configurable static controls, exact geometry trajectory, persistent complement intervention | Reproducible geometry and intervention artifacts with matched configs |
 | P1: accessibility | Is complement state controllable, observable, and functionally used? | Gate scans, Gramians, rotating-routing and delayed-copy tasks | Multi-seed functional effect beyond transport preservation |
-| P2: method fidelity | Does faithful dynamic mHC behave like the static proxy, and is budgeted BiLip-HC useful? | Source-pinned dynamic mHC parity implementation and a separate BiLip-HC spec | Parity tests plus matched-cost evidence |
+| P2: method fidelity | Does faithful dynamic mHC behave like the static proxy, and is budgeted BiLip-HC useful? | Source-pinned dynamic mHC parity implementation, a separate BiLip-HC spec, and minimal Givens/Householder IsoHC | Parity tests plus matched-cost evidence |
 | P3: scaling and systems | Does the surviving mechanism scale at acceptable cost? | 100M–1B token-budget matrix and kernel/system profiling | Statistical and wall-clock evidence, not a single run |
 
 This specification fully defines P0. P1–P3 retain the full requested direction but each requires its own design review after P0 evidence exists.
@@ -96,11 +96,22 @@ The geometry suite verifies this prediction against the actual Sinkhorn output b
 
 ### Experiment suites
 
-`experiments/hc_causal_controls.py` exposes three suites:
+`experiments/hc_causal_controls.py` exposes four suites:
 
 1. `geometry`: no LM training. It scans `diag_bias={2,4,6,8}`, `temperature={0.5,1,2}`, `noise_std={0,0.01}`, and `sinkhorn_iters={5,10,20}` for the requested stream count and transport depth. It records analytic and measured single-step and composite geometry.
 2. `p0-smoke`: tiny random-data runs covering identity-HC, IsoHC, one trainable static-Birkhoff configuration, its frozen counterpart, identity-blended Birkhoff, and matched scaled-IsoHC.
 3. `p0-train`: the paper-facing shortlist. It runs `diag_bias={2,4,6,8}` with frozen and trainable static Birkhoff, the matched scaled-IsoHC controls, identity-HC, and IsoHC. Temperature variants are promoted from `geometry` only when they materially change the initial spectrum, avoiding an automatic full Cartesian training grid.
+4. `p0-depth`: the fixed-parameter depth study. It runs `L={24,48,72,96,128}` and reports `2L` transport steps. The selected widths below were measured with the current model, vocabulary `50257`, eight heads, four streams, context `512`, and tied embeddings; every configuration is within 5% of the 48-layer reference parameter count.
+
+| Layers | Width | Heads | Parameters | Transport steps |
+| ---: | ---: | ---: | ---: | ---: |
+| 24 | 704 | 8 | 178,516,487 | 48 |
+| 48 | 512 | 8 | 177,041,159 | 96 |
+| 72 | 416 | 8 | 170,703,431 | 144 |
+| 96 | 368 | 8 | 174,765,479 | 192 |
+| 128 | 320 | 8 | 173,618,055 | 256 |
+
+The depth suite runs identity-HC, IsoHC, the selected trainable static-Birkhoff configuration, its frozen counterpart, and the matched scaled-IsoHC control. `depth_summary.json` records `log(composite_sv_min)`, `log(composite_sv_max)`, and the corresponding sums of per-step log singular values against both layer count and actual transport count.
 
 Every output directory includes `experiment_variant` and `seed`. The entrypoint refuses to overwrite an existing completed `run_summary.json`; reruns use a new output root or explicit resume workflow rather than deleting evidence.
 
@@ -143,6 +154,12 @@ E_\perp=\frac{\lVert P_\perp X\rVert_F^2}{\lVert X\rVert_F^2}.
 
 The old full-state stream cosine remains for backward comparison, and a new centered stream cosine is reported from `P_perp X`. Historical schema-1 artifacts are never silently compared to schema-2 energy values.
 
+### Dtype and method provenance
+
+The IsoHC documentation and result metadata state the implementation that actually ran: tiny complement matrices are projected in float64 inside `iso_ns_project` and converted back to the caller dtype. The summary also records `ns_steps`, `use_svd`, `svd_fallback`, caller parameter dtype, AMP dtype, and whether `torch.compile` was enabled. It does not describe the current path as `bf16_fp32_mix` or imply that a disabled SVD fallback ran.
+
+Minimal Givens/Householder parameterization is deliberately deferred to P2. Replacing raw-polar IsoHC during P0 would change the optimizer geometry at the same time as the causal controls, defeating the purpose of the first experiment.
+
 ### Persistent complement intervention
 
 The model already accepts multiple `state_index` values, so persistent clamping needs no new forward API. For start state `k`, the analyzer applies the intervention at every state from `k` through `2L`:
@@ -162,7 +179,7 @@ The existing single-state removal remains available and is labeled as a weak int
 ## Files and Responsibilities
 
 - `docs/0714_experiment_guidance.md`: verbatim supplied guidance with a non-authoritative status banner.
-- `lm/mixing.py`: validated Birkhoff/IsoHC control parameters and fixed-basis diagnostics.
+- `lm/mixing.py`: validated Birkhoff/IsoHC control parameters, accurate projection-dtype documentation, and fixed-basis diagnostics.
 - `lm/models.py`: mixer configuration plumbing and unchanged intervention contract.
 - `lm/transport_analysis.py`: exact complement spectra, composite trajectory inputs, and mean/complement leakage.
 - `lm/diagnostics.py`: schema-2 norm, energy, centered-cosine, and transport snapshot metrics.
@@ -189,8 +206,10 @@ The new tests must prove:
 - frozen mixer parameters have no gradients while the rest of the model remains trainable;
 - the noise-free analytic gain matches measured Sinkhorn geometry;
 - scaled-IsoHC preserves the mean and applies the requested complement gain;
+- depth presets produce exactly `2L` transports and remain within 5% of the measured 48-layer parameter reference;
 - exactly `n_streams - 1` singular values and both leakage directions are reported;
 - schema-2 norm and energy ratios have the expected square relationship;
+- result metadata matches the actual projection, caller, AMP, fallback, and compile settings;
 - persistent intervention acts at every requested state and paired metrics are finite;
 - old `mhc` checkpoints remain loadable while new output is labeled `static-birkhoff-hc`.
 
