@@ -19,6 +19,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import torch
+import torch.nn.functional as F
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -118,6 +119,129 @@ def evaluate_loss(model, val_loader, device, use_amp=True, max_batches=4,
         "val_ppl": math.exp(min(val_loss, 20)),
         "val_batches": batches,
     }
+
+
+@torch.no_grad()
+def evaluate_paired_intervention(
+    model,
+    val_loader,
+    device,
+    use_amp=True,
+    max_batches=4,
+    stream_intervention=None,
+):
+    """Compare baseline and intervention on the same validation batches."""
+    model.eval()
+    base_nll_sum = 0.0
+    intervention_nll_sum = 0.0
+    kl_sum = 0.0
+    changed = 0
+    token_count = 0
+    batch_count = 0
+
+    for batch_index, (x, y) in enumerate(val_loader):
+        x = x.to(device, non_blocking=True)
+        y = y.to(device, non_blocking=True)
+        with amp_autocast(device, enabled=use_amp):
+            base_logits, _ = model(x)
+            intervention_logits, _ = model(
+                x, stream_intervention=stream_intervention
+            )
+
+        valid = y.ne(-100)
+        count = int(valid.sum().item())
+        if count:
+            base_logits = base_logits.float()
+            intervention_logits = intervention_logits.float()
+            flat_y = y.reshape(-1)
+            base_nll_sum += F.cross_entropy(
+                base_logits.reshape(-1, base_logits.size(-1)),
+                flat_y,
+                ignore_index=-100,
+                reduction="sum",
+            ).item()
+            intervention_nll_sum += F.cross_entropy(
+                intervention_logits.reshape(
+                    -1, intervention_logits.size(-1)
+                ),
+                flat_y,
+                ignore_index=-100,
+                reduction="sum",
+            ).item()
+            base_logp = F.log_softmax(base_logits, dim=-1)
+            intervention_logp = F.log_softmax(
+                intervention_logits, dim=-1
+            )
+            token_kl = (
+                base_logp.exp() * (base_logp - intervention_logp)
+            ).sum(dim=-1)
+            kl_sum += token_kl[valid].sum().item()
+            changed += (
+                base_logits.argmax(dim=-1)[valid]
+                != intervention_logits.argmax(dim=-1)[valid]
+            ).sum().item()
+            token_count += count
+        batch_count += 1
+        if max_batches and batch_index >= max_batches - 1:
+            break
+
+    denominator = max(token_count, 1)
+    base_nll = base_nll_sum / denominator
+    intervention_nll = intervention_nll_sum / denominator
+    return {
+        "base_nll": base_nll,
+        "intervention_nll": intervention_nll,
+        "delta_nll": intervention_nll - base_nll,
+        "base_ppl": math.exp(min(base_nll, 20)),
+        "intervention_ppl": math.exp(min(intervention_nll, 20)),
+        "mean_token_kl": kl_sum / denominator,
+        "top1_change_rate": changed / denominator,
+        "tokens": token_count,
+        "batches": batch_count,
+    }
+
+
+def persistent_complement_scale_curve(
+    model,
+    val_loader,
+    device,
+    start_indices,
+    scales,
+    use_amp=True,
+    max_batches=4,
+):
+    if not hasattr(model, "num_layers"):
+        return []
+    final_state = 2 * model.num_layers
+    rows = []
+    for start in start_indices:
+        if not 0 <= start <= final_state:
+            raise ValueError(
+                f"start state {start} is outside [0, {final_state}]"
+            )
+        active_states = list(range(start, final_state + 1))
+        for scale in scales:
+            if not 0.0 <= scale <= 1.0:
+                raise ValueError("intervention scales must be in [0, 1]")
+            metrics = evaluate_paired_intervention(
+                model,
+                val_loader,
+                device,
+                use_amp=use_amp,
+                max_batches=max_batches,
+                stream_intervention={
+                    "state_index": active_states,
+                    "mode": "scale_perp",
+                    "scale": float(scale),
+                },
+            )
+            rows.append({
+                "start_state": start,
+                "scale": float(scale),
+                "active_state_count": len(active_states),
+                **metrics,
+            })
+    return rows
 
 
 def stream_gradient_profile(model, val_loader, device, use_amp=True):
@@ -249,6 +373,23 @@ def analyze_run(run_dir, args, device):
                 base["val_loss"],
                 args,
             )
+            num_states = 1 + 2 * model.num_layers
+            indices = list(range(
+                0, num_states, max(1, args.intervention_stride)
+            ))
+            if indices[-1] != num_states - 1:
+                indices.append(num_states - 1)
+            report["persistent_complement_scale"] = (
+                persistent_complement_scale_curve(
+                    model,
+                    val_loader,
+                    device,
+                    start_indices=indices,
+                    scales=args.intervention_scales,
+                    use_amp=use_amp,
+                    max_batches=args.eval_batches,
+                )
+            )
             identity_eval = evaluate_loss(
                 model,
                 val_loader,
@@ -324,9 +465,21 @@ def write_markdown(report, output_path):
         strongest = max(removal, key=lambda row: row["delta_loss"])
         lines.extend([
             "",
-            "## Complement Removal",
+            "## Weak Single-State Complement Removal",
             "",
             f"- strongest delta loss: `{strongest['delta_loss']:.6g}` at state `{strongest['state_index']}`",
+        ])
+
+    persistent = report.get("persistent_complement_scale")
+    if persistent:
+        max_delta = max(abs(row["delta_nll"]) for row in persistent)
+        max_kl = max(row["mean_token_kl"] for row in persistent)
+        lines.extend([
+            "",
+            "## Persistent Complement Scaling",
+            "",
+            f"- maximum absolute delta NLL: `{max_delta:.6g}`",
+            f"- maximum mean token KL: `{max_kl:.6g}`",
         ])
 
     output_path.write_text("\n".join(lines) + "\n")
@@ -347,6 +500,12 @@ def main():
     parser.add_argument("--max_samples_val", type=int, default=None)
     parser.add_argument("--eval_batches", type=int, default=4)
     parser.add_argument("--intervention_stride", type=int, default=8)
+    parser.add_argument(
+        "--intervention_scales",
+        nargs="+",
+        type=float,
+        default=[0.0, 0.25, 0.5, 0.75, 1.0],
+    )
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument("--no_amp", action="store_true")
     parser.add_argument("--skip_interventions", action="store_true")

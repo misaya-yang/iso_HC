@@ -9,6 +9,7 @@ from unittest.mock import patch
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import DataLoader, TensorDataset
 
 from lm.diagnostics import (
     DiagnosticsCollector,
@@ -29,6 +30,10 @@ from experiments.lm_5090_next_runs import (
     create_model,
     run_single,
     runtime_provenance,
+)
+from experiments.analyze_lm_mechanisms import (
+    evaluate_paired_intervention,
+    persistent_complement_scale_curve,
 )
 
 
@@ -186,6 +191,54 @@ class LMNextPhaseContractTests(unittest.TestCase):
         self.assertFalse(provenance["use_svd"])
         self.assertTrue(provenance["svd_fallback"])
         self.assertIsNone(provenance["amp_dtype"])
+
+    def test_persistent_scale_one_is_an_exact_paired_noop(self):
+        torch.manual_seed(41)
+        model = TwoBranchHCTransformer(
+            vocab_size=64,
+            d_model=32,
+            num_layers=2,
+            num_heads=4,
+            n_streams=4,
+            context_length=8,
+            mixing_type="identity",
+            use_flash=True,
+        )
+        x = torch.randint(0, 64, (2, 8))
+        y = torch.randint(0, 64, (2, 8))
+        loader = DataLoader(TensorDataset(x, y), batch_size=2)
+        metrics = evaluate_paired_intervention(
+            model,
+            loader,
+            torch.device("cpu"),
+            use_amp=False,
+            max_batches=1,
+            stream_intervention={
+                "state_index": list(range(1, 2 * model.num_layers + 1)),
+                "mode": "scale_perp",
+                "scale": 1.0,
+            },
+        )
+        self.assertAlmostEqual(metrics["delta_nll"], 0.0, places=7)
+        self.assertAlmostEqual(metrics["mean_token_kl"], 0.0, places=7)
+        self.assertAlmostEqual(metrics["top1_change_rate"], 0.0, places=7)
+
+        curve = persistent_complement_scale_curve(
+            model,
+            loader,
+            torch.device("cpu"),
+            start_indices=[1],
+            scales=[0.0, 1.0],
+            use_amp=False,
+            max_batches=1,
+        )
+        self.assertEqual(curve[0]["active_state_count"], 4)
+        for row in curve:
+            self.assertTrue(torch.isfinite(torch.tensor([
+                row["delta_nll"],
+                row["mean_token_kl"],
+                row["top1_change_rate"],
+            ])).all())
 
     def test_random_dataset_supports_offline_training_smoke(self):
         class DummyTokenizer:
