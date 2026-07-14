@@ -93,17 +93,22 @@ class OrthogonalMixing(StreamMixing):
 class IsoHCMixing(StreamMixing):
     """IsoHC mixing: H^T H = I, H @ 1 = 1 (fixed-vector isometry).
 
-    Uses Newton-Schulz polar decomposition with optional SVD fallback.
-    Projection runs in fp32 for numerical stability (bf16 causes mean drift).
+    Uses Newton-Schulz polar decomposition with optional SVD fallback. The
+    tiny complement matrix is projected in float64 and returned in the caller
+    dtype by iso_ns_project.
     """
 
     def __init__(self, n_streams, ns_steps=5, init_scale=0.01,
-                 use_svd=False, svd_fallback=True, fallback_tol=1e-3):
+                 use_svd=False, svd_fallback=True, fallback_tol=1e-3,
+                 complement_scale=1.0):
         super().__init__(n_streams)
+        if not 0.0 < complement_scale <= 1.0:
+            raise ValueError("complement_scale must be in (0, 1]")
         self.ns_steps = ns_steps
         self.use_svd = use_svd
         self.svd_fallback = svd_fallback
         self.fallback_tol = fallback_tol
+        self.complement_scale = float(complement_scale)
 
         # Raw parameter: near identity
         self.H_raw = nn.Parameter(
@@ -115,7 +120,7 @@ class IsoHCMixing(StreamMixing):
         self.register_buffer('U', U)
 
     def forward(self):
-        return iso_ns_project(
+        H = iso_ns_project(
             self.H_raw,
             U=self.U,
             steps=self.ns_steps,
@@ -124,6 +129,13 @@ class IsoHCMixing(StreamMixing):
             svd_fallback=self.svd_fallback,
             fallback_tolerance=self.fallback_tol,
         )
+        if self.complement_scale == 1.0:
+            return H
+        ones = torch.ones(
+            self.n_streams, 1, device=H.device, dtype=H.dtype
+        )
+        P = ones @ ones.T / self.n_streams
+        return P + self.complement_scale * (H - P)
 
     def get_diagnostics(self):
         H = self.forward().detach()
@@ -157,10 +169,19 @@ class MHCMixing(StreamMixing):
     """
 
     def __init__(self, n_streams, sinkhorn_iters=10, temperature=1.0,
-                 diag_bias=4.0, noise_std=0.01):
+                 diag_bias=4.0, noise_std=0.01, identity_blend=1.0):
         super().__init__(n_streams)
-        self.sinkhorn_iters = sinkhorn_iters
-        self.temperature = temperature
+        if sinkhorn_iters < 1:
+            raise ValueError("sinkhorn_iters must be at least 1")
+        if temperature <= 0.0:
+            raise ValueError("temperature must be positive")
+        if not 0.0 <= identity_blend <= 1.0:
+            raise ValueError("identity_blend must be in [0, 1]")
+        self.sinkhorn_iters = int(sinkhorn_iters)
+        self.temperature = float(temperature)
+        self.diag_bias = float(diag_bias)
+        self.noise_std = float(noise_std)
+        self.identity_blend = float(identity_blend)
 
         # Near-identity initialization: strong diagonal bias + small noise
         logits_init = torch.eye(n_streams) * diag_bias
@@ -178,7 +199,11 @@ class MHCMixing(StreamMixing):
         return torch.exp(logP)
 
     def forward(self):
-        return self.sinkhorn(self.logits)
+        H = self.sinkhorn(self.logits)
+        if self.identity_blend == 1.0:
+            return H
+        eye = torch.eye(self.n_streams, device=H.device, dtype=H.dtype)
+        return (1.0 - self.identity_blend) * eye + self.identity_blend * H
 
     def get_diagnostics(self):
         H = self.forward().detach()
@@ -187,7 +212,7 @@ class MHCMixing(StreamMixing):
         ones = torch.ones(n, 1, device=device, dtype=torch.float32)
 
         row_sum_err = torch.norm(H.sum(dim=1, keepdim=True) - ones, p=2).item()
-        col_sum_err = torch.norm(H.sum(dim=0, keepdim=True) - ones, p=2).item()
+        col_sum_err = torch.norm(H.sum(dim=0, keepdim=True) - ones.T, p=2).item()
 
         # Check non-negativity
         neg_ratio = (H < 0).float().mean().item()
@@ -199,21 +224,19 @@ class MHCMixing(StreamMixing):
         normalized_entropy = entropy / max_entropy
 
         # Singular values on 1_perp (contraction indicator)
-        e0 = ones / (n ** 0.5)
-        P_perp = torch.eye(n, device=device) - e0 @ e0.T
-        A = P_perp @ H @ P_perp
-        s = torch.linalg.svdvals(A)
-        # Exclude the zero singular value corresponding to 1-vector
-        s_nonzero = s[s > 1e-6]
+        U = construct_orthogonal_complement(
+            n, device=device, dtype=torch.float32
+        )
+        s = torch.linalg.svdvals(U.T @ H.float() @ U)
 
         return {
             'row_sum_err': row_sum_err,
             'col_sum_err': col_sum_err,
             'neg_ratio': neg_ratio,
             'entropy': normalized_entropy,
-            'sv_min_1perp': s_nonzero.min().item() if len(s_nonzero) > 0 else 0.0,
-            'sv_max_1perp': s_nonzero.max().item() if len(s_nonzero) > 0 else 0.0,
-            'sv_mean_1perp': s_nonzero.mean().item() if len(s_nonzero) > 0 else 0.0,
+            'sv_min_1perp': s.min().item(),
+            'sv_max_1perp': s.max().item(),
+            'sv_mean_1perp': s.mean().item(),
         }
 
 
@@ -239,6 +262,7 @@ def create_mixing(n_streams, mixing_type, **kwargs):
             use_svd=kwargs.get('use_svd', False),
             svd_fallback=kwargs.get('svd_fallback', True),
             fallback_tol=kwargs.get('fallback_tol', 1e-3),
+            complement_scale=kwargs.get('complement_scale', 1.0),
         )
     elif mixing_type == 'mhc':
         return MHCMixing(
@@ -247,6 +271,7 @@ def create_mixing(n_streams, mixing_type, **kwargs):
             temperature=kwargs.get('temperature', 1.0),
             diag_bias=kwargs.get('diag_bias', 4.0),
             noise_std=kwargs.get('noise_std', 0.01),
+            identity_blend=kwargs.get('identity_blend', 1.0),
         )
     else:
         raise ValueError(f"Unknown mixing_type: {mixing_type}")

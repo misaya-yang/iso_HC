@@ -31,9 +31,12 @@ def complement_spectrum(H, U=None):
     else:
         U = U.to(device=H.device, dtype=torch.float32)
 
+    ones = torch.ones(n, 1, device=H.device, dtype=torch.float32)
+    v = ones / (n ** 0.5)
     B = U.T @ H @ U
     s = torch.linalg.svdvals(B)
     return {
+        "singular_values": s.cpu().tolist(),
         "sv_min": s.min().item(),
         "sv_mean": s.mean().item(),
         "sv_max": s.max().item(),
@@ -41,6 +44,10 @@ def complement_spectrum(H, U=None):
             B - torch.eye(n - 1, device=H.device, dtype=torch.float32),
             p="fro",
         ).item(),
+        "mean_to_perp_leakage": torch.norm(U.T @ H @ v).item(),
+        "perp_to_mean_leakage": torch.norm(v.T @ H @ U).item(),
+        "row_sum_error": torch.norm(H @ ones - ones).item(),
+        "col_sum_error": torch.norm(ones.T @ H - ones.T).item(),
     }
 
 
@@ -93,11 +100,11 @@ def collect_transport_report(source):
     prefix = []
     for index, item in enumerate(matrices):
         H = item["H"].detach().float()
+        stats = complement_spectrum(H, U)
         B = U.T @ H @ U
-        s = torch.linalg.svdvals(B)
-        s_min = s.min().item()
-        s_mean = s.mean().item()
-        s_max = s.max().item()
+        s_min = stats["sv_min"]
+        s_mean = stats["sv_mean"]
+        s_max = stats["sv_max"]
 
         product_sv_min *= max(s_min, eps)
         product_sv_mean *= max(s_mean, eps)
@@ -109,19 +116,14 @@ def collect_transport_report(source):
             "index": int(item.get("index", index)),
             "branch": item.get("branch", "transport"),
             "layer": int(item.get("layer", index)),
-            "sv_min": s_min,
-            "sv_mean": s_mean,
-            "sv_max": s_max,
-            "identity_distance": torch.norm(
-                B - torch.eye(n - 1, device=H.device, dtype=torch.float32),
-                p="fro",
-            ).item(),
+            **stats,
         }
         steps.append(step)
         prefix.append({
             "index": step["index"],
             "branch": step["branch"],
             "layer": step["layer"],
+            "composite_singular_values": c.cpu().tolist(),
             "composite_sv_min": c.min().item(),
             "composite_sv_mean": c.mean().item(),
             "composite_sv_max": c.max().item(),
@@ -130,10 +132,19 @@ def collect_transport_report(source):
             "product_sv_max": product_sv_max,
         })
 
+    final = dict(prefix[-1])
+    for key in (
+        "mean_to_perp_leakage",
+        "perp_to_mean_leakage",
+        "row_sum_error",
+        "col_sum_error",
+    ):
+        final[f"{key}_max"] = max(step[key] for step in steps)
+
     return {
         "n_streams": n,
         "num_transports": len(matrices),
         "steps": steps,
         "prefix": prefix,
-        "final": prefix[-1],
+        "final": final,
     }

@@ -10,13 +10,47 @@ import torch.nn.functional as F
 from lm.diagnostics import compute_head_output_stats
 from lm.data import create_dataloader, save_token_cache, TokenizedTextDataset
 from lm.headmix import HeadOutputMixing
+from lm.mixing import IsoHCMixing, MHCMixing
 from lm.models import CausalSelfAttention, TwoBranchHCTransformer
 from lm.train import run_experiment
-from lm.transport_analysis import collect_transport_report
+from lm.transport_analysis import complement_spectrum, collect_transport_report
 from experiments.lm_5090_next_runs import build_preset_configs, create_model
 
 
 class LMNextPhaseContractTests(unittest.TestCase):
+    def test_causal_mixer_controls_and_exact_transport_geometry(self):
+        torch.manual_seed(31)
+        base = MHCMixing(4, noise_std=0.0)
+        blended = MHCMixing(4, noise_std=0.0, identity_blend=0.5)
+        blended.logits.data.copy_(base.logits.data)
+        expected = 0.5 * torch.eye(4) + 0.5 * base()
+        self.assertTrue(torch.allclose(blended(), expected, atol=1e-7))
+
+        scaled = IsoHCMixing(
+            4, use_svd=True, svd_fallback=False, complement_scale=0.8
+        )
+        stats = complement_spectrum(scaled())
+        self.assertEqual(len(stats["singular_values"]), 3)
+        self.assertTrue(all(abs(value - 0.8) < 1e-5
+                            for value in stats["singular_values"]))
+
+        report = collect_transport_report([torch.eye(4), torch.eye(4)])
+        self.assertEqual(len(report["steps"][0]["singular_values"]), 3)
+        self.assertEqual(
+            len(report["final"]["composite_singular_values"]), 3
+        )
+        self.assertAlmostEqual(report["final"]["row_sum_error_max"], 0.0)
+
+    def test_causal_mixer_controls_validate_ranges(self):
+        with self.assertRaises(ValueError):
+            MHCMixing(4, temperature=0.0)
+        with self.assertRaises(ValueError):
+            MHCMixing(4, sinkhorn_iters=0)
+        with self.assertRaises(ValueError):
+            MHCMixing(4, identity_blend=1.1)
+        with self.assertRaises(ValueError):
+            IsoHCMixing(4, complement_scale=0.0)
+
     def test_random_dataset_supports_offline_training_smoke(self):
         class DummyTokenizer:
             vocab_size = 257
