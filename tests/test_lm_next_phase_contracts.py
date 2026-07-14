@@ -1,6 +1,7 @@
 import contextlib
 import io
 import json
+import math
 import tempfile
 import unittest
 from pathlib import Path
@@ -34,6 +35,14 @@ from experiments.lm_5090_next_runs import (
 from experiments.analyze_lm_mechanisms import (
     evaluate_paired_intervention,
     persistent_complement_scale_curve,
+)
+from experiments.hc_causal_controls import (
+    DEPTH_PRESETS,
+    build_depth_summary,
+    build_suite_configs,
+    ensure_run_is_new,
+    identity_hc_parameter_count,
+    symmetric_birkhoff_gain,
 )
 
 
@@ -239,6 +248,73 @@ class LMNextPhaseContractTests(unittest.TestCase):
                 row["mean_token_kl"],
                 row["top1_change_rate"],
             ])).all())
+
+    def test_causal_suite_math_counts_and_labels(self):
+        gain = symmetric_birkhoff_gain(4, 4.0, 1.0)
+        measured = complement_spectrum(MHCMixing(
+            4, diag_bias=4.0, temperature=1.0,
+            noise_std=0.0, sinkhorn_iters=10,
+        )())["sv_mean"]
+        self.assertAlmostEqual(gain, measured, places=6)
+
+        reference = DEPTH_PRESETS[48]["parameters"]
+        for layers, preset in DEPTH_PRESETS.items():
+            count = identity_hc_parameter_count(
+                50257, 512, 4, layers, preset["d_model"]
+            )
+            self.assertEqual(count, preset["parameters"])
+            self.assertLessEqual(abs(count - reference) / reference, 0.05)
+            self.assertEqual(preset["num_transports"], 2 * layers)
+
+        kwargs = dict(
+            output_dir="outputs/test",
+            dataset="random",
+            total_tokens=4096,
+            batch_size=2,
+            seed=0,
+            use_compile=False,
+        )
+        smoke = build_suite_configs("p0-smoke", **kwargs)
+        train = build_suite_configs("p0-train", **kwargs)
+        depth = build_suite_configs("p0-depth", **kwargs)
+        self.assertEqual((len(smoke), len(train), len(depth)), (6, 14, 25))
+        self.assertEqual(len({c["experiment_variant"] for c in depth}), 25)
+
+    def test_depth_summary_and_output_safety(self):
+        report = build_depth_summary([{
+            "success": True,
+            "config": {
+                "method": "static-birkhoff-hc",
+                "experiment_variant": "depth1_test",
+                "num_layers": 1,
+                "d_model": 32,
+                "target_parameters": 123,
+            },
+            "final_transport": {
+                "num_transports": 2,
+                "steps": [
+                    {"sv_min": 0.5, "sv_max": 0.8},
+                    {"sv_min": 0.25, "sv_max": 0.9},
+                ],
+                "final": {
+                    "composite_sv_min": 0.1,
+                    "composite_sv_max": 0.7,
+                },
+            },
+        }])
+        row = report["rows"][0]
+        self.assertAlmostEqual(row["log_composite_sv_min"], math.log(0.1))
+        self.assertAlmostEqual(
+            row["sum_step_log_sv_min"],
+            math.log(0.5) + math.log(0.25),
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_dir = Path(tmpdir) / "variant"
+            run_dir.mkdir()
+            (run_dir / "run_summary.json").write_text("{}")
+            with self.assertRaises(FileExistsError):
+                ensure_run_is_new(run_dir)
 
     def test_random_dataset_supports_offline_training_smoke(self):
         class DummyTokenizer:
