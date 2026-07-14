@@ -1,7 +1,10 @@
 import contextlib
 import io
+import json
 import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 import torch
 import torch.nn as nn
@@ -14,7 +17,11 @@ from lm.mixing import IsoHCMixing, MHCMixing
 from lm.models import CausalSelfAttention, TwoBranchHCTransformer
 from lm.train import run_experiment
 from lm.transport_analysis import complement_spectrum, collect_transport_report
-from experiments.lm_5090_next_runs import build_preset_configs, create_model
+from experiments.lm_5090_next_runs import (
+    build_preset_configs,
+    create_model,
+    run_single,
+)
 
 
 class LMNextPhaseContractTests(unittest.TestCase):
@@ -50,6 +57,82 @@ class LMNextPhaseContractTests(unittest.TestCase):
             MHCMixing(4, identity_blend=1.1)
         with self.assertRaises(ValueError):
             IsoHCMixing(4, complement_scale=0.0)
+
+    def test_runner_propagates_causal_controls_and_freezes_only_mixers(self):
+        cfg = build_preset_configs(
+            "run0", ["static-birkhoff-hc"], "outputs/test", batch_size=2
+        )[0]
+        cfg.update({
+            "mixing_kwargs": {
+                "diag_bias": 6.0,
+                "temperature": 2.0,
+                "noise_std": 0.0,
+                "sinkhorn_iters": 5,
+                "identity_blend": 0.75,
+            },
+            "lambda_a": 0.03,
+            "lambda_b": 0.1,
+            "freeze_mixing": True,
+        })
+        model = create_model(cfg, 128, torch.device("cpu"))
+
+        self.assertEqual(model.mixing_type, "mhc")
+        self.assertAlmostEqual(model.readout_lambda.item(), 0.03)
+        self.assertAlmostEqual(model.injection_lambda.item(), 0.1)
+        for mixing in list(model.attn_mixings) + list(model.mlp_mixings):
+            self.assertEqual(mixing.sinkhorn_iters, 5)
+            self.assertAlmostEqual(mixing.identity_blend, 0.75)
+            self.assertTrue(all(not p.requires_grad
+                                for p in mixing.parameters()))
+        self.assertTrue(model.readout_lambda.requires_grad)
+        self.assertTrue(model.attns[0].q_proj.weight.requires_grad)
+
+    def test_runner_aliases_preserve_legacy_checkpoint_keys(self):
+        legacy_cfg = build_preset_configs(
+            "run0", ["mhc"], "outputs/test", batch_size=2
+        )[0]
+        scaled_cfg = build_preset_configs(
+            "run0", ["scaled-isohc"], "outputs/test", batch_size=2
+        )[0]
+        scaled_cfg["mixing_kwargs"] = {"complement_scale": 0.9}
+
+        legacy = create_model(legacy_cfg, 128, torch.device("cpu"))
+        reloaded = create_model(legacy_cfg, 128, torch.device("cpu"))
+        reloaded.load_state_dict(legacy.state_dict(), strict=True)
+        scaled = create_model(scaled_cfg, 128, torch.device("cpu"))
+        self.assertEqual(scaled.mixing_type, "isohc")
+        self.assertAlmostEqual(
+            scaled.attn_mixings[0].complement_scale, 0.9
+        )
+
+    def test_failed_run_writes_summary_before_reraising(self):
+        cfg = build_preset_configs(
+            "run0",
+            ["identity-hc"],
+            "outputs/test",
+            total_tokens=4096,
+            batch_size=2,
+            dataset="random",
+            use_compile=False,
+        )[0]
+        cfg.update({
+            "num_workers": 0,
+            "max_samples": 8,
+            "max_samples_val": 4,
+        })
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cfg["save_dir"] = tmpdir
+            with patch(
+                "experiments.lm_5090_next_runs.create_model",
+                side_effect=RuntimeError("expected failure"),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "expected failure"):
+                    run_single(cfg)
+            summary = json.loads(
+                (Path(tmpdir) / "run_summary.json").read_text()
+            )
+        self.assertFalse(summary["success"])
+        self.assertIn("expected failure", summary["error"])
 
     def test_random_dataset_supports_offline_training_smoke(self):
         class DummyTokenizer:

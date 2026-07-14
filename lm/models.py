@@ -533,6 +533,7 @@ class TwoBranchHCTransformer(nn.Module):
         head_mixing_type=None,
         head_mixing_kwargs=None,
         stream_noise_scale=1e-3,
+        mixing_kwargs=None,
     ):
         super().__init__()
         self.vocab_size = vocab_size
@@ -567,17 +568,19 @@ class TwoBranchHCTransformer(nn.Module):
             MLP(d_model, mlp_ratio, dropout) for _ in range(num_layers)
         ])
 
-        mixing_kwargs = {
+        resolved_mixing_kwargs = {
             "ns_steps": ns_steps,
             "svd_fallback": svd_fallback,
             "sinkhorn_iters": sinkhorn_iters,
         }
+        resolved_mixing_kwargs.update(dict(mixing_kwargs or {}))
+        self.mixing_kwargs = resolved_mixing_kwargs
         self.attn_mixings = nn.ModuleList([
-            create_mixing(n_streams, mixing_type, **mixing_kwargs)
+            create_mixing(n_streams, mixing_type, **self.mixing_kwargs)
             for _ in range(num_layers)
         ])
         self.mlp_mixings = nn.ModuleList([
-            create_mixing(n_streams, mixing_type, **mixing_kwargs)
+            create_mixing(n_streams, mixing_type, **self.mixing_kwargs)
             for _ in range(num_layers)
         ])
 

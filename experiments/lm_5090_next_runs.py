@@ -102,6 +102,16 @@ HEADMIX_TYPES = {
     "headmix-fixed-random-iso": "fixed-random-iso",
 }
 
+HC_METHOD_TO_MIXING = {
+    "identity-hc": "identity",
+    "unconstrained": "unconstrained",
+    "mhc": "mhc",
+    "static-birkhoff-hc": "mhc",
+    "isohc": "isohc",
+    "scaled-isohc": "isohc",
+    "orthogonal": "orthogonal",
+}
+
 
 def build_preset_configs(
     preset,
@@ -187,16 +197,7 @@ def create_model(config, vocab_size, device):
             dropout=config["dropout"],
             use_flash=config["use_flash"],
         )
-    elif method in (
-        "identity-hc",
-        "unconstrained",
-        "mhc",
-        "isohc",
-        "orthogonal",
-    ):
-        mixing_type = {
-            "identity-hc": "identity",
-        }.get(method, method)
+    elif method in HC_METHOD_TO_MIXING:
         model = TwoBranchHCTransformer(
             vocab_size=vocab_size,
             d_model=config["d_model"],
@@ -204,16 +205,20 @@ def create_model(config, vocab_size, device):
             num_heads=config["num_heads"],
             n_streams=config["n_streams"],
             context_length=config["context_length"],
-            mixing_type=mixing_type,
+            mixing_type=HC_METHOD_TO_MIXING[method],
             mlp_ratio=config["mlp_ratio"],
             dropout=config["dropout"],
-            lambda_a=0.01,
-            lambda_b=0.01,
+            lambda_a=config.get("lambda_a", 0.01),
+            lambda_b=config.get("lambda_b", 0.01),
             ns_steps=5,
-            svd_fallback=(method != "isohc"),
+            svd_fallback=(method not in {"isohc", "scaled-isohc"}),
             sinkhorn_iters=10,
             use_flash=config["use_flash"],
+            mixing_kwargs=config.get("mixing_kwargs"),
         )
+        if config.get("freeze_mixing", False):
+            for mixings in (model.attn_mixings, model.mlp_mixings):
+                mixings.requires_grad_(False)
     else:
         raise ValueError(f"Unknown method: {method}")
 
@@ -341,7 +346,15 @@ def collect_posthoc_diagnostics(model, val_loader, device):
     return result
 
 
-def run_single(config, auto_batch=False, memory_target_gb=30.0):
+def write_run_summary(config, summary):
+    os.makedirs(config["save_dir"], exist_ok=True)
+    path = os.path.join(config["save_dir"], "run_summary.json")
+    with open(path, "w") as f:
+        json.dump(summary, f, indent=2, default=str)
+    return path
+
+
+def _execute_run(config, auto_batch, memory_target_gb):
     torch.manual_seed(config["seed"])
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if device.type == "cuda":
@@ -357,7 +370,7 @@ def run_single(config, auto_batch=False, memory_target_gb=30.0):
 
     if auto_batch:
         batch, mem_gb = autotune_batch_size(config, tokenizer, device, memory_target_gb)
-        config = dict(config, batch_size=batch, autotuned_peak_gb=mem_gb)
+        config.update(batch_size=batch, autotuned_peak_gb=mem_gb)
 
     train_loader, _ = create_dataloader(
         config["dataset"],
@@ -418,18 +431,22 @@ def run_single(config, auto_batch=False, memory_target_gb=30.0):
         "fused_adamw": True,
     }
 
+    results = run_experiment(model, train_loader, val_loader, train_cfg, device)
+    posthoc = collect_posthoc_diagnostics(model, val_loader, device)
+    return {
+        "success": True,
+        "config": config,
+        "final_eval": results["final_eval"],
+        "train_metrics": results["train_metrics"],
+        "posthoc": posthoc,
+    }
+
+
+def run_single(config, auto_batch=False, memory_target_gb=30.0):
+    config = dict(config)
     started = time.time()
     try:
-        results = run_experiment(model, train_loader, val_loader, train_cfg, device)
-        posthoc = collect_posthoc_diagnostics(model, val_loader, device)
-        summary = {
-            "success": True,
-            "config": config,
-            "final_eval": results["final_eval"],
-            "train_metrics": results["train_metrics"],
-            "posthoc": posthoc,
-            "elapsed_sec": time.time() - started,
-        }
+        summary = _execute_run(config, auto_batch, memory_target_gb)
     except Exception as exc:
         summary = {
             "success": False,
@@ -437,12 +454,11 @@ def run_single(config, auto_batch=False, memory_target_gb=30.0):
             "error": f"{type(exc).__name__}: {exc}",
             "elapsed_sec": time.time() - started,
         }
+        write_run_summary(config, summary)
         raise
-    finally:
-        os.makedirs(config["save_dir"], exist_ok=True)
 
-    with open(os.path.join(config["save_dir"], "run_summary.json"), "w") as f:
-        json.dump(summary, f, indent=2, default=str)
+    summary["elapsed_sec"] = time.time() - started
+    write_run_summary(config, summary)
     return summary
 
 
