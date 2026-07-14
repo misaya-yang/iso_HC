@@ -2,7 +2,7 @@
 
 Tracks:
   - H geometry (orth_error, fix_error, singular values)
-  - Mean-zero energy: ||P_perp X||_F / ||X||_F
+  - Mean-zero norm ratio and squared energy
   - Stream cosine similarity
   - Gradient profile by layer
   - Training stability (loss spikes, grad norm, activation stats)
@@ -23,6 +23,7 @@ class DiagnosticsCollector:
         self.collect_every = collect_every
         self.step_count = 0
         self.history = defaultdict(list)
+        self.snapshots = defaultdict(list)
 
     def should_collect(self):
         return self.step_count % self.collect_every == 0
@@ -51,6 +52,11 @@ class DiagnosticsCollector:
             elif isinstance(value, torch.Tensor):
                 self.history[full_key].append(value.detach().cpu().item())
 
+    def record_snapshot(self, name, value):
+        """Record a structured JSON-ready snapshot at collection steps."""
+        if self.should_collect():
+            self.snapshots[name].append(value)
+
     def get_summary(self):
         """Get mean of all recorded metrics."""
         summary = {}
@@ -65,24 +71,28 @@ class DiagnosticsCollector:
 
     def clear(self):
         self.history.clear()
+        self.snapshots.clear()
         self.step_count = 0
 
 
+def compute_mean_zero_norm_ratio(X, eps=1e-12):
+    """Compute ||P_perp X||_F / ||X||_F."""
+    mean = X.mean(dim=0, keepdim=True)
+    X_perp = X - mean
+    return (
+        torch.norm(X_perp, p='fro')
+        / (torch.norm(X, p='fro') + eps)
+    ).item()
+
+
 def compute_mean_zero_energy(X, eps=1e-12):
-    """Compute mean-zero energy ratio: ||P_perp X||_F / ||X||_F.
+    """Compute squared mean-zero energy ratio.
 
     X: (s, B, T, d) stream states
     Returns: scalar in [0, 1]
     """
-    s = X.shape[0]
-    # Mean over stream dimension
-    mean = X.mean(dim=0, keepdim=True)  # (1, B, T, d)
-    X_perp = X - mean  # (s, B, T, d)
-
-    norm_perp = torch.norm(X_perp, p='fro')
-    norm_total = torch.norm(X, p='fro')
-
-    return (norm_perp / (norm_total + eps)).item()
+    ratio = compute_mean_zero_norm_ratio(X, eps=eps)
+    return ratio * ratio
 
 
 def compute_stream_cosine(X, eps=1e-12):
@@ -105,6 +115,18 @@ def compute_stream_cosine(X, eps=1e-12):
     # Average of off-diagonal elements
     mask = ~torch.eye(s, dtype=torch.bool, device=X.device)
     return cos_sim[mask].mean().item()
+
+
+def compute_centered_stream_cosine(X, eps=1e-12):
+    """Average pairwise cosine after removing the stream mean."""
+    s = X.shape[0]
+    if s <= 1:
+        return 1.0
+    flat = (X - X.mean(dim=0, keepdim=True)).reshape(s, -1)
+    normed = flat / (torch.norm(flat, dim=1, keepdim=True) + eps)
+    cosine = normed @ normed.T
+    mask = ~torch.eye(s, dtype=torch.bool, device=X.device)
+    return cosine[mask].mean().item()
 
 
 def compute_head_output_stats(O, eps=1e-12):
@@ -230,5 +252,37 @@ def collect_hc_diagnostics(model):
         # Don't call this during training (expensive)
         # Only for evaluation hooks
         pass
+
+    if hasattr(model, "get_named_mixing_matrices"):
+        from .transport_analysis import collect_transport_report
+
+        report = collect_transport_report(model)
+        results["transport_report"] = report
+        final = report.get("final", {})
+        for key in (
+            "composite_sv_min",
+            "composite_sv_mean",
+            "composite_sv_max",
+            "product_sv_min",
+            "product_sv_mean",
+            "product_sv_max",
+            "mean_to_perp_leakage_max",
+            "perp_to_mean_leakage_max",
+            "row_sum_error_max",
+            "col_sum_error_max",
+        ):
+            if key in final:
+                results[f"transport/{key}"] = final[key]
+
+    for result_key, attribute in (
+        ("readout_lambda", "readout_lambda"),
+        ("injection_lambda", "injection_lambda"),
+        ("final_readout_lambda", "readout_final_lambda"),
+    ):
+        parameter = getattr(model, attribute, None)
+        if parameter is not None:
+            results[f"gates/{result_key}"] = (
+                parameter.detach().float().item()
+            )
 
     return results

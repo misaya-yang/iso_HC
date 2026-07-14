@@ -144,7 +144,14 @@ def train_epoch(model, dataloader, optimizer, device,
         # Diagnostics
         if diagnostics is not None:
             diagnostics.step()
+            optimizer_step = diagnostics.step_count
+            tokens_processed = min(
+                optimizer_step * tokens_per_step,
+                total_tokens_target,
+            )
             diagnostics.record(
+                optimizer_step=optimizer_step,
+                tokens_processed=tokens_processed,
                 train_loss=batch_loss,
                 lr=lr,
                 grad_norm=get_total_grad_norm(model),
@@ -158,7 +165,25 @@ def train_epoch(model, dataloader, optimizer, device,
                     model, getattr(model, 'num_layers', 0)
                 )
                 diagnostics.record(**grad_stats)
-                diagnostics.record_dict('hc', collect_hc_diagnostics(model))
+                hc_stats = collect_hc_diagnostics(model)
+                transport_report = hc_stats.pop("transport_report", None)
+                gate_values = {
+                    key: hc_stats[f"gates/{key}"]
+                    for key in (
+                        "readout_lambda",
+                        "injection_lambda",
+                        "final_readout_lambda",
+                    )
+                    if f"gates/{key}" in hc_stats
+                }
+                diagnostics.record_dict('hc', hc_stats)
+                if transport_report is not None:
+                    diagnostics.record_snapshot("transport", {
+                        "optimizer_step": optimizer_step,
+                        "tokens_processed": tokens_processed,
+                        "transport": transport_report,
+                        "gate_values": gate_values,
+                    })
                 if hasattr(model, 'get_headmix_diagnostics'):
                     diagnostics.record_dict('headmix', model.get_headmix_diagnostics())
 
@@ -389,6 +414,7 @@ def run_experiment(model, train_loader, val_loader, config, device):
             'config': config,
             'final_eval': final_eval,
             'diagnostics': dict(diagnostics.history),
+            'diagnostic_snapshots': dict(diagnostics.snapshots),
             'train_metrics': all_metrics,
         }, os.path.join(config['save_dir'], 'final.pt'))
 

@@ -10,7 +10,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from lm.diagnostics import compute_head_output_stats
+from lm.diagnostics import (
+    DiagnosticsCollector,
+    compute_centered_stream_cosine,
+    compute_head_output_stats,
+    compute_mean_zero_energy,
+    compute_mean_zero_norm_ratio,
+)
 from lm.data import create_dataloader, save_token_cache, TokenizedTextDataset
 from lm.headmix import HeadOutputMixing
 from lm.mixing import IsoHCMixing, MHCMixing
@@ -18,9 +24,11 @@ from lm.models import CausalSelfAttention, TwoBranchHCTransformer
 from lm.train import run_experiment
 from lm.transport_analysis import complement_spectrum, collect_transport_report
 from experiments.lm_5090_next_runs import (
+    build_transport_history,
     build_preset_configs,
     create_model,
     run_single,
+    runtime_provenance,
 )
 
 
@@ -133,6 +141,51 @@ class LMNextPhaseContractTests(unittest.TestCase):
             )
         self.assertFalse(summary["success"])
         self.assertIn("expected failure", summary["error"])
+
+    def test_schema2_metrics_and_structured_transport_history(self):
+        torch.manual_seed(37)
+        X = torch.randn(4, 2, 3, 5)
+        ratio = compute_mean_zero_norm_ratio(X)
+        self.assertAlmostEqual(
+            compute_mean_zero_energy(X), ratio ** 2, places=6
+        )
+        self.assertTrue(torch.isfinite(torch.tensor(
+            compute_centered_stream_cosine(X)
+        )))
+
+        diagnostics = DiagnosticsCollector()
+        snapshot = {
+            "optimizer_step": 20,
+            "tokens_processed": 2000,
+            "transport": {
+                "n_streams": 4,
+                "steps": [{"singular_values": [0.7, 0.8, 0.9]}],
+                "final": {
+                    "composite_singular_values": [0.7, 0.8, 0.9]
+                },
+            },
+            "gate_values": {"readout_lambda": 0.02},
+        }
+        diagnostics.record_snapshot("transport", snapshot)
+        self.assertEqual(build_transport_history(diagnostics), [snapshot])
+
+    def test_runtime_provenance_matches_constructed_isohc(self):
+        cfg = build_preset_configs(
+            "run0", ["isohc"], "outputs/test", batch_size=2,
+            use_compile=False,
+        )[0]
+        cfg["mixing_kwargs"] = {
+            "ns_steps": 7,
+            "use_svd": False,
+            "svd_fallback": True,
+        }
+        model = create_model(cfg, 128, torch.device("cpu"))
+        provenance = runtime_provenance(model, cfg, torch.device("cpu"))
+        self.assertEqual(provenance["projection_internal_dtype"], "torch.float64")
+        self.assertEqual(provenance["ns_steps"], 7)
+        self.assertFalse(provenance["use_svd"])
+        self.assertTrue(provenance["svd_fallback"])
+        self.assertIsNone(provenance["amp_dtype"])
 
     def test_random_dataset_supports_offline_training_smoke(self):
         class DummyTokenizer:

@@ -22,7 +22,12 @@ import torch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from lm.data import create_dataloader, get_tokenizer
-from lm.diagnostics import compute_mean_zero_energy, compute_stream_cosine
+from lm.diagnostics import (
+    compute_centered_stream_cosine,
+    compute_mean_zero_energy,
+    compute_mean_zero_norm_ratio,
+    compute_stream_cosine,
+)
 from lm.models import BaselineTransformer, TwoBranchHCTransformer
 from lm.train import run_experiment
 from lm.transport_analysis import collect_transport_report
@@ -307,15 +312,23 @@ def collect_posthoc_diagnostics(model, val_loader, device):
     x = x[:2].to(device)
     if hasattr(model, "get_stream_states"):
         states = model.get_stream_states(x)
+        norm_ratios = [compute_mean_zero_norm_ratio(s) for s in states]
         energies = [compute_mean_zero_energy(s) for s in states]
         cosines = [compute_stream_cosine(s) for s in states]
+        centered_cosines = [compute_centered_stream_cosine(s) for s in states]
         result.update({
+            "mean_zero_norm_ratio_initial": norm_ratios[0],
+            "mean_zero_norm_ratio_final": norm_ratios[-1],
+            "mean_zero_norm_ratio_curve": norm_ratios,
             "mean_zero_energy_initial": energies[0],
             "mean_zero_energy_final": energies[-1],
             "stream_cosine_initial": cosines[0],
             "stream_cosine_final": cosines[-1],
             "mean_zero_energy_curve": energies,
             "stream_cosine_curve": cosines,
+            "centered_stream_cosine_initial": centered_cosines[0],
+            "centered_stream_cosine_final": centered_cosines[-1],
+            "centered_stream_cosine_curve": centered_cosines,
         })
     else:
         model.eval()
@@ -344,6 +357,42 @@ def collect_posthoc_diagnostics(model, val_loader, device):
     if hasattr(model, "get_headmix_diagnostics"):
         result["headmix"] = model.get_headmix_diagnostics()
     return result
+
+
+def build_transport_history(diagnostics):
+    return list(diagnostics.snapshots.get("transport", []))
+
+
+def gate_values(model):
+    values = {}
+    for result_key, attribute in (
+        ("readout_lambda", "readout_lambda"),
+        ("injection_lambda", "injection_lambda"),
+        ("final_readout_lambda", "readout_final_lambda"),
+    ):
+        parameter = getattr(model, attribute, None)
+        if parameter is not None:
+            values[result_key] = parameter.detach().float().item()
+    return values
+
+
+def runtime_provenance(model, config, device):
+    is_iso = config["method"] in {"isohc", "scaled-isohc"}
+    mixing = model.attn_mixings[0] if is_iso else None
+    return {
+        "parameter_dtype": str(next(model.parameters()).dtype),
+        "amp_dtype": (
+            "torch.bfloat16"
+            if config.get("use_amp", True) and device.type == "cuda"
+            else None
+        ),
+        "projection_internal_dtype": "torch.float64" if is_iso else None,
+        "ns_steps": getattr(mixing, "ns_steps", None),
+        "use_svd": getattr(mixing, "use_svd", None),
+        "svd_fallback": getattr(mixing, "svd_fallback", None),
+        "use_compile": bool(config.get("use_compile", False)),
+        "compile_mode": config.get("compile_mode"),
+    }
 
 
 def write_run_summary(config, summary):
@@ -400,6 +449,12 @@ def _execute_run(config, auto_batch, memory_target_gb):
     )
 
     model = create_model(config, tokenizer.vocab_size, device)
+    initial_transport = (
+        collect_transport_report(model)
+        if hasattr(model, "get_named_mixing_matrices")
+        else None
+    )
+    initial_gate_values = gate_values(model)
     print("=" * 80)
     print(f"{config['preset']} / {config['method']} / seed={config['seed']}")
     print(f"params={model.count_parameters()/1e6:.2f}M batch={config['batch_size']} "
@@ -436,9 +491,18 @@ def _execute_run(config, auto_batch, memory_target_gb):
     return {
         "success": True,
         "config": config,
+        "metric_schema_version": config.get("metric_schema_version", 1),
         "final_eval": results["final_eval"],
         "train_metrics": results["train_metrics"],
         "posthoc": posthoc,
+        "initial_transport": initial_transport,
+        "initial_gate_values": initial_gate_values,
+        "training_transport_history": build_transport_history(
+            results["diagnostics"]
+        ),
+        "final_transport": posthoc.get("transport_complement"),
+        "final_gate_values": gate_values(model),
+        "runtime_provenance": runtime_provenance(model, config, device),
     }
 
 
