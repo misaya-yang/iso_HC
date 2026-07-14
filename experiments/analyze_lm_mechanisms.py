@@ -27,7 +27,10 @@ from experiments.lm_5090_next_runs import create_model
 from isohc.projection import construct_orthogonal_complement
 from lm.data import create_dataloader, get_tokenizer
 from lm.train import amp_autocast
-from lm.transport_analysis import collect_transport_report
+from lm.transport_analysis import (
+    collect_accessibility_report,
+    collect_transport_report,
+)
 
 
 def infer_vocab_size(state_dict):
@@ -239,6 +242,51 @@ def persistent_complement_scale_curve(
                 "start_state": start,
                 "scale": float(scale),
                 "active_state_count": len(active_states),
+                "semantics": "repeated_statewise_damping",
+                **metrics,
+            })
+    return rows
+
+
+def one_shot_complement_scale_curve(
+    model,
+    val_loader,
+    device,
+    state_indices,
+    scales,
+    use_amp=True,
+    max_batches=4,
+):
+    """Scale complement once, avoiding repeated-gamma compounding."""
+    if not hasattr(model, "num_layers"):
+        return []
+    final_state = 2 * model.num_layers
+    rows = []
+    for state_index in state_indices:
+        if not 0 <= state_index <= final_state:
+            raise ValueError(
+                f"state {state_index} is outside [0, {final_state}]"
+            )
+        for scale in scales:
+            if not 0.0 <= scale <= 1.0:
+                raise ValueError("intervention scales must be in [0, 1]")
+            metrics = evaluate_paired_intervention(
+                model,
+                val_loader,
+                device,
+                use_amp=use_amp,
+                max_batches=max_batches,
+                stream_intervention={
+                    "state_index": state_index,
+                    "mode": "scale_perp",
+                    "scale": float(scale),
+                },
+            )
+            rows.append({
+                "state_index": state_index,
+                "scale": float(scale),
+                "application_count": 1,
+                "semantics": "one_shot_scaling",
                 **metrics,
             })
     return rows
@@ -357,6 +405,7 @@ def analyze_run(run_dir, args, device):
 
     if hasattr(model, "get_named_mixing_matrices"):
         report["transport_complement"] = collect_transport_report(model)
+        report["accessibility_proxy"] = collect_accessibility_report(model)
         report["gradient_profile"] = stream_gradient_profile(
             model,
             val_loader,
@@ -379,6 +428,17 @@ def analyze_run(run_dir, args, device):
             ))
             if indices[-1] != num_states - 1:
                 indices.append(num_states - 1)
+            report["one_shot_complement_scale"] = (
+                one_shot_complement_scale_curve(
+                    model,
+                    val_loader,
+                    device,
+                    state_indices=indices,
+                    scales=args.intervention_scales,
+                    use_amp=use_amp,
+                    max_batches=args.eval_batches,
+                )
+            )
             report["persistent_complement_scale"] = (
                 persistent_complement_scale_curve(
                     model,
@@ -480,6 +540,16 @@ def write_markdown(report, output_path):
             "",
             f"- maximum absolute delta NLL: `{max_delta:.6g}`",
             f"- maximum mean token KL: `{max_kl:.6g}`",
+        ])
+
+    one_shot = report.get("one_shot_complement_scale")
+    if one_shot:
+        max_delta = max(abs(row["delta_nll"]) for row in one_shot)
+        lines.extend([
+            "",
+            "## One-shot Complement Scaling",
+            "",
+            f"- maximum absolute delta NLL: `{max_delta:.6g}`",
         ])
 
     output_path.write_text("\n".join(lines) + "\n")

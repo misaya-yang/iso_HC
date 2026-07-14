@@ -24,13 +24,17 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from lm.data import create_dataloader, get_tokenizer
 from lm.diagnostics import (
     compute_centered_stream_cosine,
+    compute_complement_participation_rank,
     compute_mean_zero_energy,
     compute_mean_zero_norm_ratio,
     compute_stream_cosine,
 )
 from lm.models import BaselineTransformer, TwoBranchHCTransformer
 from lm.train import run_experiment
-from lm.transport_analysis import collect_transport_report
+from lm.transport_analysis import (
+    collect_accessibility_report,
+    collect_transport_report,
+)
 
 
 PRESETS = {
@@ -116,6 +120,39 @@ HC_METHOD_TO_MIXING = {
     "scaled-isohc": "isohc",
     "orthogonal": "orthogonal",
 }
+
+
+_ACCESS_WEIGHT_LISTS = (
+    "attn_readout_weights",
+    "attn_injection_weights",
+    "mlp_readout_weights",
+    "mlp_injection_weights",
+)
+
+
+def match_hc_initialization(model, seed):
+    """Match core and access-gate initialization across HC methods."""
+    torch.manual_seed(int(seed))
+    model.apply(model._init_weights)
+    with torch.no_grad():
+        for name in _ACCESS_WEIGHT_LISTS:
+            for parameter in getattr(model, name):
+                value = torch.randn_like(parameter)
+                parameter.copy_(value - value.mean())
+        value = torch.randn_like(model.readout_final)
+        model.readout_final.copy_(value - value.mean())
+
+
+def freeze_access_gates(model):
+    for name in _ACCESS_WEIGHT_LISTS:
+        getattr(model, name).requires_grad_(False)
+    for name in (
+        "readout_lambda",
+        "injection_lambda",
+        "readout_final",
+        "readout_final_lambda",
+    ):
+        getattr(model, name).requires_grad_(False)
 
 
 def build_preset_configs(
@@ -221,9 +258,13 @@ def create_model(config, vocab_size, device):
             use_flash=config["use_flash"],
             mixing_kwargs=config.get("mixing_kwargs"),
         )
+        if config.get("matched_init_seed") is not None:
+            match_hc_initialization(model, config["matched_init_seed"])
         if config.get("freeze_mixing", False):
             for mixings in (model.attn_mixings, model.mlp_mixings):
                 mixings.requires_grad_(False)
+        if config.get("freeze_access_gates", False):
+            freeze_access_gates(model)
     else:
         raise ValueError(f"Unknown method: {method}")
 
@@ -316,6 +357,9 @@ def collect_posthoc_diagnostics(model, val_loader, device):
         energies = [compute_mean_zero_energy(s) for s in states]
         cosines = [compute_stream_cosine(s) for s in states]
         centered_cosines = [compute_centered_stream_cosine(s) for s in states]
+        participation_ranks = [
+            compute_complement_participation_rank(s) for s in states
+        ]
         result.update({
             "mean_zero_norm_ratio_initial": norm_ratios[0],
             "mean_zero_norm_ratio_final": norm_ratios[-1],
@@ -329,6 +373,9 @@ def collect_posthoc_diagnostics(model, val_loader, device):
             "centered_stream_cosine_initial": centered_cosines[0],
             "centered_stream_cosine_final": centered_cosines[-1],
             "centered_stream_cosine_curve": centered_cosines,
+            "complement_participation_rank_initial": participation_ranks[0],
+            "complement_participation_rank_final": participation_ranks[-1],
+            "complement_participation_rank_curve": participation_ranks,
         })
     else:
         model.eval()
@@ -353,6 +400,7 @@ def collect_posthoc_diagnostics(model, val_loader, device):
             })
     if hasattr(model, "get_named_mixing_matrices"):
         result["transport_complement"] = collect_transport_report(model)
+        result["accessibility_proxy"] = collect_accessibility_report(model)
 
     if hasattr(model, "get_headmix_diagnostics"):
         result["headmix"] = model.get_headmix_diagnostics()
@@ -454,6 +502,11 @@ def _execute_run(config, auto_batch, memory_target_gb):
         if hasattr(model, "get_named_mixing_matrices")
         else None
     )
+    initial_accessibility = (
+        collect_accessibility_report(model)
+        if hasattr(model, "get_named_mixing_matrices")
+        else None
+    )
     initial_gate_values = gate_values(model)
     print("=" * 80)
     print(f"{config['preset']} / {config['method']} / seed={config['seed']}")
@@ -496,11 +549,13 @@ def _execute_run(config, auto_batch, memory_target_gb):
         "train_metrics": results["train_metrics"],
         "posthoc": posthoc,
         "initial_transport": initial_transport,
+        "initial_accessibility_proxy": initial_accessibility,
         "initial_gate_values": initial_gate_values,
         "training_transport_history": build_transport_history(
             results["diagnostics"]
         ),
         "final_transport": posthoc.get("transport_complement"),
+        "final_accessibility_proxy": posthoc.get("accessibility_proxy"),
         "final_gate_values": gate_values(model),
         "runtime_provenance": runtime_provenance(model, config, device),
     }

@@ -30,6 +30,24 @@ Server P0 run using existing data-disk caches:
 `p0-depth` overrides the global batch per depth to stay below the calibrated
 28 GB limit: 24/48/72/96/128 layers use batch 29/20/16/14/12 respectively.
 
+P1 accessibility screen (24 layers, 28 matched-initialization configs):
+
+```bash
+/root/miniconda3/bin/python3 -u experiments/hc_causal_controls.py \
+  --suite p1-access \
+  --output_dir /root/autodl-tmp/isoHC/results/p1_access_seed0 \
+  --dataset fineweb-edu \
+  --total_tokens 2000000 \
+  --skip_posthoc \
+  --train_cache_path /root/autodl-tmp/isoHC/data/lm_cache/HuggingFaceFW__fineweb-edu__sample-10BT_train_ctx512.pt \
+  --val_cache_path /root/autodl-tmp/isoHC/data/lm_cache/HuggingFaceFW__fineweb-edu__sample-10BT_train_heldout_ctx512.pt
+```
+
+The screen uses batch 29 and saves final checkpoints only. Probe it on the
+target GPU before the full sweep. Run `analyze_lm_mechanisms.py` only on
+surviving configurations; `16` batches is screening evidence and `0` uses the
+complete validation cache.
+
 The runner refuses completed output directories. Use a new output root for a
 rerun. `static-birkhoff-hc` is a static Sinkhorn proxy, not faithful dynamic
 mHC; `mhc` is retained only as a legacy alias.

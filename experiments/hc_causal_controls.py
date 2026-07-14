@@ -160,13 +160,15 @@ def _birkhoff_kwargs(diag_bias, identity_blend=1.0):
 def build_suite_configs(
     suite, output_dir, dataset, total_tokens, batch_size, seed, use_compile
 ):
-    if suite not in {"p0-smoke", "p0-train", "p0-depth"}:
+    if suite not in {"p0-smoke", "p0-train", "p0-depth", "p1-access"}:
         raise ValueError(f"Unknown training suite: {suite}")
     configs = []
 
     def add(
         preset, method, variant, mixing_kwargs=None,
-        freeze_mixing=False, structural=None,
+        freeze_mixing=False, structural=None, lambda_a=0.01,
+        lambda_b=0.01, freeze_access_gates=False,
+        matched_init_seed=None,
     ):
         config = build_preset_configs(
             preset=preset,
@@ -181,9 +183,11 @@ def build_suite_configs(
         config.update({
             "experiment_variant": variant,
             "mixing_kwargs": dict(mixing_kwargs or {}),
-            "lambda_a": 0.01,
-            "lambda_b": 0.01,
+            "lambda_a": float(lambda_a),
+            "lambda_b": float(lambda_b),
             "freeze_mixing": bool(freeze_mixing),
+            "freeze_access_gates": bool(freeze_access_gates),
+            "matched_init_seed": matched_init_seed,
             "metric_schema_version": 2,
             "save_dir": str(Path(output_dir) / f"{variant}_seed{seed}"),
         })
@@ -191,6 +195,8 @@ def build_suite_configs(
             config.update(structural)
         if suite == "p0-smoke":
             config["diagnostics_every"] = 1
+        if suite == "p1-access":
+            config["save_best_checkpoints"] = False
         configs.append(config)
 
     if suite == "p0-smoke":
@@ -223,6 +229,49 @@ def build_suite_configs(
                         4, bias, 1.0
                     )
                 })
+        return configs
+
+    if suite == "p1-access":
+        depth = DEPTH_PRESETS[24]
+        structural = {
+            "num_layers": 24,
+            "d_model": depth["d_model"],
+            "num_heads": depth["num_heads"],
+            "batch_size": depth["batch_size"],
+            "target_parameters": depth["parameters"],
+            "expected_num_transports": depth["num_transports"],
+        }
+        gain = symmetric_birkhoff_gain(4, 4.0, 1.0)
+        gates = (
+            ("g0", 0.0, 0.0),
+            ("g1", 0.01, 0.01),
+            ("g2", 0.05, 0.05),
+            ("g3", 0.15, 0.15),
+            ("g4", 0.30, 0.30),
+            ("g5", 0.05, 0.20),
+            ("g6", 0.20, 0.05),
+        )
+        methods = (
+            ("identity-hc", "identity_hc", None),
+            ("static-birkhoff-hc", "birkhoff_d4", _birkhoff_kwargs(4.0)),
+            ("scaled-isohc", "scaled_isohc_match_d4", {
+                "complement_scale": gain,
+            }),
+            ("isohc", "isohc", None),
+        )
+        for gate, read, write in gates:
+            for method, label, mixing_kwargs in methods:
+                add(
+                    "fe-deep-48l-512",
+                    method,
+                    f"access_{gate}_{label}",
+                    mixing_kwargs,
+                    structural=structural,
+                    lambda_a=read,
+                    lambda_b=write,
+                    freeze_access_gates=(gate == "g0"),
+                    matched_init_seed=seed,
+                )
         return configs
 
     for layers, depth in DEPTH_PRESETS.items():
@@ -277,7 +326,7 @@ def run_posthoc(run_dirs, args):
         "--dataset",
         args.dataset,
         "--eval_batches",
-        "4",
+        str(args.posthoc_eval_batches),
         "--intervention_stride",
         "8",
         "--intervention_scales",
@@ -296,7 +345,9 @@ def parse_args():
     )
     parser.add_argument(
         "--suite",
-        choices=["geometry", "p0-smoke", "p0-train", "p0-depth"],
+        choices=[
+            "geometry", "p0-smoke", "p0-train", "p0-depth", "p1-access",
+        ],
         required=True,
     )
     parser.add_argument("--output_dir", required=True)
@@ -313,6 +364,7 @@ def parse_args():
     parser.add_argument("--val_cache_path")
     parser.add_argument("--vocab_size", type=int, default=50257)
     parser.add_argument("--skip_posthoc", action="store_true")
+    parser.add_argument("--posthoc_eval_batches", type=int, default=4)
     return parser.parse_args()
 
 
@@ -331,7 +383,14 @@ def main():
         print(f"Wrote {path}")
         return
 
-    if args.suite in {"p0-train", "p0-depth"} and not torch.cuda.is_available():
+    if args.posthoc_eval_batches < 0:
+        raise ValueError("posthoc_eval_batches must be non-negative")
+    if args.suite == "p1-access" and args.auto_batch:
+        raise ValueError("p1-access requires one fixed batch across methods")
+    if (
+        args.suite in {"p0-train", "p0-depth", "p1-access"}
+        and not torch.cuda.is_available()
+    ):
         raise RuntimeError(
             f"{args.suite} requires CUDA; use p0-smoke for CPU checks"
         )

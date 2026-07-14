@@ -6,6 +6,8 @@ module keeps that analysis small, explicit, and reusable from training runners
 and checkpoint analysis scripts.
 """
 
+import math
+
 import torch
 
 from isohc.projection import construct_orthogonal_complement
@@ -147,4 +149,153 @@ def collect_transport_report(source):
         "steps": steps,
         "prefix": prefix,
         "final": final,
+    }
+
+
+def _gramian_summary(matrix, eps):
+    matrix = 0.5 * (matrix + matrix.T)
+    eigenvalues = torch.linalg.eigvalsh(matrix).clamp_min(0.0)
+    if not eigenvalues.numel():
+        return {
+            "eigenvalues": [],
+            "rank": 0,
+            "lambda_min": 0.0,
+            "lambda_max": 0.0,
+            "logdet_regularized": 0.0,
+        }
+    largest = eigenvalues.max()
+    tolerance = max(float(eps), largest.item() * 1e-8)
+    return {
+        "eigenvalues": eigenvalues.cpu().tolist(),
+        "rank": int((eigenvalues > tolerance).sum().item()),
+        "lambda_min": eigenvalues.min().item(),
+        "lambda_max": largest.item(),
+        "logdet_regularized": torch.log(eigenvalues + eps).sum().item(),
+    }
+
+
+@torch.no_grad()
+def collect_accessibility_report(model, eps=1e-12):
+    """Linear transport-and-gate accessibility proxy for an HC model.
+
+    The Transformer updates are nonlinear, so these are structural stream-space
+    Gramians, not full-model controllability or observability claims.
+    """
+    required = (
+        "get_named_mixing_matrices",
+        "_make_stream_vector",
+        "attn_readout_weights",
+        "attn_injection_weights",
+        "mlp_readout_weights",
+        "mlp_injection_weights",
+        "readout_final",
+    )
+    if any(not hasattr(model, name) for name in required):
+        raise TypeError("Expected a TwoBranchHCTransformer-style model")
+
+    n = int(model.n_streams)
+    complement_dim = max(0, n - 1)
+    device = next(model.parameters()).device
+    U = mean_zero_basis(n, device=device, dtype=torch.float64)
+    matrices = {
+        (item["branch"], int(item["layer"])): item["H"].detach().double()
+        for item in model.get_named_mixing_matrices()
+    }
+    steps = []
+    Bs = []
+    alphas = []
+    betas = []
+
+    for layer in range(model.num_layers):
+        for branch, readouts, injections in (
+            ("attn", model.attn_readout_weights, model.attn_injection_weights),
+            ("mlp", model.mlp_readout_weights, model.mlp_injection_weights),
+        ):
+            a = model._make_stream_vector(
+                readouts[layer], model.readout_lambda
+            ).double()
+            b = model._make_stream_vector(
+                injections[layer], model.injection_lambda
+            ).double()
+            a_perp = U.T @ (a - a.mean())
+            b_perp = U.T @ (b - b.mean())
+            alpha = a_perp / n
+            beta = b_perp
+            B = U.T @ matrices[(branch, layer)] @ U
+            Bs.append(B)
+            alphas.append(alpha)
+            betas.append(beta)
+            steps.append({
+                "index": len(steps),
+                "branch": branch,
+                "layer": layer,
+                "readout_gate_norm": (
+                    torch.linalg.vector_norm(a_perp) / math.sqrt(n)
+                ).item(),
+                "injection_gate_norm": (
+                    torch.linalg.vector_norm(b_perp) / math.sqrt(n)
+                ).item(),
+            })
+
+    final_a = model._make_stream_vector(
+        model.readout_final, model.readout_final_lambda
+    ).double()
+    final_a_perp = U.T @ (final_a - final_a.mean())
+    final_alpha = final_a_perp / n
+    alphas.append(final_alpha)
+
+    Wc = torch.zeros(
+        complement_dim, complement_dim, device=device, dtype=torch.float64
+    )
+    Phi = torch.eye(complement_dim, device=device, dtype=torch.float64)
+    for index in range(len(Bs) - 1, -1, -1):
+        mapped = Phi @ betas[index]
+        Wc += torch.outer(mapped, mapped)
+        Phi = Phi @ Bs[index]
+
+    Wo = torch.zeros_like(Wc)
+    Phi = torch.eye(complement_dim, device=device, dtype=torch.float64)
+    for index, B in enumerate(Bs):
+        mapped = alphas[index] @ Phi
+        Wo += torch.outer(mapped, mapped)
+        Phi = B @ Phi
+    mapped_final = final_alpha @ Phi
+    Wo += torch.outer(mapped_final, mapped_final)
+
+    if complement_dim:
+        wo_eigenvalues, wo_eigenvectors = torch.linalg.eigh(
+            0.5 * (Wo + Wo.T)
+        )
+        sqrt_wo = (
+            wo_eigenvectors
+            @ torch.diag(wo_eigenvalues.clamp_min(0.0).sqrt())
+            @ wo_eigenvectors.T
+        )
+        balanced = sqrt_wo @ Wc @ sqrt_wo
+        hankel_squared = 0.5 * (balanced + balanced.T)
+        hankel = torch.linalg.eigvalsh(
+            hankel_squared
+        ).clamp_min(0.0).sqrt()
+    else:
+        hankel = torch.empty(0, dtype=torch.float64, device=device)
+
+    readout_norms = [row["readout_gate_norm"] for row in steps]
+    injection_norms = [row["injection_gate_norm"] for row in steps]
+    return {
+        "kind": "linear_transport_gate_proxy",
+        "nonlinear_full_model_claim": False,
+        "n_streams": n,
+        "complement_dim": complement_dim,
+        "regularization_eps": float(eps),
+        "steps": steps,
+        "readout_gate_norm_mean": sum(readout_norms) / max(len(steps), 1),
+        "injection_gate_norm_mean": (
+            sum(injection_norms) / max(len(steps), 1)
+        ),
+        "final_readout_gate_norm": (
+            torch.linalg.vector_norm(final_a_perp) / math.sqrt(n)
+        ).item(),
+        "controllability": _gramian_summary(Wc, eps),
+        "observability": _gramian_summary(Wo, eps),
+        "hankel_singular_values": hankel.cpu().tolist(),
     }

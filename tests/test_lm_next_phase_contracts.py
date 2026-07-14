@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from lm.diagnostics import (
     DiagnosticsCollector,
     compute_centered_stream_cosine,
+    compute_complement_participation_rank,
     compute_head_output_stats,
     compute_mean_zero_energy,
     compute_mean_zero_norm_ratio,
@@ -24,7 +25,11 @@ from lm.headmix import HeadOutputMixing
 from lm.mixing import IsoHCMixing, MHCMixing
 from lm.models import CausalSelfAttention, TwoBranchHCTransformer
 from lm.train import run_experiment
-from lm.transport_analysis import complement_spectrum, collect_transport_report
+from lm.transport_analysis import (
+    collect_accessibility_report,
+    complement_spectrum,
+    collect_transport_report,
+)
 from experiments.lm_5090_next_runs import (
     build_transport_history,
     build_preset_configs,
@@ -34,6 +39,7 @@ from experiments.lm_5090_next_runs import (
 )
 from experiments.analyze_lm_mechanisms import (
     evaluate_paired_intervention,
+    one_shot_complement_scale_curve,
     persistent_complement_scale_curve,
 )
 from experiments.hc_causal_controls import (
@@ -114,6 +120,44 @@ class LMNextPhaseContractTests(unittest.TestCase):
         self.assertTrue(model.readout_lambda.requires_grad)
         self.assertTrue(model.attns[0].q_proj.weight.requires_grad)
 
+    def test_p1_matched_initialization_and_frozen_zero_access(self):
+        base = build_preset_configs(
+            "run0", ["identity-hc"], "outputs/test", batch_size=2
+        )[0]
+        base.update({
+            "lambda_a": 0.0,
+            "lambda_b": 0.0,
+            "matched_init_seed": 17,
+            "freeze_access_gates": True,
+        })
+        iso = dict(base, method="isohc")
+
+        torch.manual_seed(1)
+        identity_model = create_model(base, 128, torch.device("cpu"))
+        torch.manual_seed(1)
+        iso_model = create_model(iso, 128, torch.device("cpu"))
+
+        self.assertTrue(torch.equal(
+            identity_model.token_embedding.weight,
+            iso_model.token_embedding.weight,
+        ))
+        for left, right in zip(
+            identity_model.attn_readout_weights,
+            iso_model.attn_readout_weights,
+        ):
+            self.assertTrue(torch.equal(left, right))
+        self.assertTrue(all(
+            not parameter.requires_grad
+            for name, parameter in identity_model.named_parameters()
+            if "readout" in name or "injection" in name
+        ))
+        report = collect_accessibility_report(identity_model)
+        self.assertEqual(report["kind"], "linear_transport_gate_proxy")
+        self.assertEqual(report["controllability"]["rank"], 0)
+        self.assertEqual(report["observability"]["rank"], 0)
+        self.assertEqual(report["readout_gate_norm_mean"], 0.0)
+        self.assertEqual(report["injection_gate_norm_mean"], 0.0)
+
     def test_runner_aliases_preserve_legacy_checkpoint_keys(self):
         legacy_cfg = build_preset_configs(
             "run0", ["mhc"], "outputs/test", batch_size=2
@@ -171,6 +215,15 @@ class LMNextPhaseContractTests(unittest.TestCase):
         self.assertTrue(torch.isfinite(torch.tensor(
             compute_centered_stream_cosine(X)
         )))
+        two_modes = torch.tensor([
+            [1.0, 0.0],
+            [-1.0, 0.0],
+            [0.0, 1.0],
+            [0.0, -1.0],
+        ]).reshape(4, 1, 1, 2)
+        self.assertAlmostEqual(
+            compute_complement_participation_rank(two_modes), 2.0, places=6
+        )
 
         diagnostics = DiagnosticsCollector()
         snapshot = {
@@ -247,12 +300,54 @@ class LMNextPhaseContractTests(unittest.TestCase):
             max_batches=1,
         )
         self.assertEqual(curve[0]["active_state_count"], 4)
+        self.assertEqual(curve[0]["semantics"], "repeated_statewise_damping")
         for row in curve:
             self.assertTrue(torch.isfinite(torch.tensor([
                 row["delta_nll"],
                 row["mean_token_kl"],
                 row["top1_change_rate"],
             ])).all())
+
+        one_shot = one_shot_complement_scale_curve(
+            model,
+            loader,
+            torch.device("cpu"),
+            state_indices=[1],
+            scales=[0.0, 1.0],
+            use_amp=False,
+            max_batches=1,
+        )
+        self.assertTrue(all(row["application_count"] == 1 for row in one_shot))
+        self.assertTrue(all(
+            row["semantics"] == "one_shot_scaling" for row in one_shot
+        ))
+        self.assertAlmostEqual(one_shot[-1]["delta_nll"], 0.0, places=7)
+
+    def test_accessibility_proxy_has_known_full_rank(self):
+        model = TwoBranchHCTransformer(
+            vocab_size=32,
+            d_model=16,
+            num_layers=1,
+            num_heads=4,
+            n_streams=3,
+            context_length=8,
+            mixing_type="identity",
+            lambda_a=1.0,
+            lambda_b=1.0,
+        )
+        first = torch.tensor([1.0, -1.0, 0.0])
+        second = torch.tensor([1.0, 1.0, -2.0])
+        with torch.no_grad():
+            model.attn_readout_weights[0].copy_(first)
+            model.attn_injection_weights[0].copy_(first)
+            model.mlp_readout_weights[0].copy_(second)
+            model.mlp_injection_weights[0].copy_(second)
+            model.readout_final.zero_()
+        report = collect_accessibility_report(model)
+        self.assertEqual(report["complement_dim"], 2)
+        self.assertEqual(report["controllability"]["rank"], 2)
+        self.assertEqual(report["observability"]["rank"], 2)
+        self.assertEqual(len(report["hankel_singular_values"]), 2)
 
     def test_causal_suite_math_counts_and_labels(self):
         gain = symmetric_birkhoff_gain(4, 4.0, 1.0)
@@ -282,12 +377,33 @@ class LMNextPhaseContractTests(unittest.TestCase):
         smoke = build_suite_configs("p0-smoke", **kwargs)
         train = build_suite_configs("p0-train", **kwargs)
         depth = build_suite_configs("p0-depth", **kwargs)
-        self.assertEqual((len(smoke), len(train), len(depth)), (6, 14, 25))
+        access = build_suite_configs("p1-access", **kwargs)
+        self.assertEqual(
+            (len(smoke), len(train), len(depth), len(access)),
+            (6, 14, 25, 28),
+        )
         self.assertEqual(len({c["experiment_variant"] for c in depth}), 25)
         self.assertEqual(
             {c["num_layers"]: c["batch_size"] for c in depth},
             {24: 29, 48: 20, 72: 16, 96: 14, 128: 12},
         )
+        self.assertEqual(
+            {(c["lambda_a"], c["lambda_b"]) for c in access},
+            {
+                (0.0, 0.0),
+                (0.01, 0.01),
+                (0.05, 0.05),
+                (0.15, 0.15),
+                (0.30, 0.30),
+                (0.05, 0.20),
+                (0.20, 0.05),
+            },
+        )
+        self.assertEqual(sum(c["freeze_access_gates"] for c in access), 4)
+        self.assertTrue(all(c["matched_init_seed"] == 0 for c in access))
+        self.assertTrue(all(not c["save_best_checkpoints"] for c in access))
+        self.assertTrue(all(c["num_layers"] == 24 for c in access))
+        self.assertTrue(all(c["batch_size"] == 29 for c in access))
 
     def test_depth_summary_and_output_safety(self):
         report = build_depth_summary([{
