@@ -20,7 +20,19 @@ export TMPDIR=/root/autodl-tmp/isoHC/tmp
 export TORCHINDUCTOR_CACHE_DIR=/root/autodl-tmp/isoHC/torchinductor_cache
 ```
 
-## Canonical Experiment Command
+## Current P0 Entrypoint
+
+Use `experiments/hc_causal_controls.py` for new causal-control evidence. Start
+with `--suite geometry`, then `p0-smoke`; promote only supported controls to
+`p0-train` or `p0-depth`.
+
+```text
+static-birkhoff-hc is the current static Sinkhorn proxy.
+It is not faithful dynamic mHC.
+Do not generalize static-proxy results to official mHC without P2 parity.
+```
+
+## Historical 0525 Reproduction Command
 
 ```bash
 cd /root/isoHC
@@ -42,7 +54,8 @@ bash experiments/run_0525_mechanism_gpu_pipeline.sh
 ## Supported Main Methods
 
 - `identity-hc`: architecture control.
-- `mhc`: Birkhoff/Sinkhorn mean-preserving transport.
+- `static-birkhoff-hc`: current Birkhoff/Sinkhorn proxy for new evidence.
+- `mhc`: legacy command/checkpoint alias for that static proxy.
 - `isohc`: Newton-Schulz fixed-vector isometric transport.
 - `unconstrained`: unsafe oracle for drift/stability stress only.
 
@@ -53,8 +66,8 @@ Spectral/SVD training baselines are intentionally not in the main runner.
 Do not frame the paper as "PPL winner". Frame it as:
 
 ```text
-mHC/Birkhoff preserves the residual mean but contracts 1_perp at depth;
-IsoHC preserves the invariant and keeps the complement transport isometric.
+The static Birkhoff proxy may contract 1_perp at depth; P0 tests whether the
+effect comes from initialization, training, or contraction itself.
 ```
 
 Main diagnostics:
@@ -64,7 +77,7 @@ Main diagnostics:
 - mean-zero stream energy
 - stream cosine / effective rank
 - layer-wise stream gradient profile
-- complement-removal intervention
+- weak single-state and persistent complement interventions
 - IsoHC -> identity/random-Iso replacement
 
 ## Do Not Use

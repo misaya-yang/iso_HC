@@ -4,14 +4,17 @@ Canonical code for the IsoHC mechanism experiments.
 
 ## Current Main Claim
 
-`mHC/Birkhoff` preserves the residual-stream mean but can contract the
-mean-zero stream subspace at depth. `IsoHC` keeps the same invariant while using
-Newton-Schulz fixed-vector isometric transport on the complement.
+The current `static-birkhoff-hc` proxy preserves the residual-stream mean but
+can contract the mean-zero stream subspace at depth. `IsoHC` keeps the same
+invariant while using fixed-vector isometric transport on the complement. This
+is a hypothesis under causal testing, not a claim about faithful dynamic mHC.
 
 ## Supported Experiment Entrypoints
 
+- `experiments/hc_causal_controls.py`
+  - Current P0 geometry, matched-control, depth, and intervention suites.
 - `experiments/run_0525_mechanism_gpu_pipeline.sh`
-  - 5090 FE 48L mechanism run.
+  - Historical 5090 FE 48L reproduction run.
   - Default methods: `identity-hc mhc isohc`.
   - Data/cache/results must live under `/root/autodl-tmp/isoHC`.
 - `experiments/lm_5090_next_runs.py`
@@ -24,6 +27,17 @@ Newton-Schulz fixed-vector isometric transport on the complement.
 
 Do not use deleted legacy FE or TinyShakespeare/PPL smoke scripts for paper
 evidence. Historical raw results are kept under `docs/0605_alldoc`.
+
+`mhc` remains a legacy command/checkpoint alias. New evidence must use the
+label `static-birkhoff-hc`.
+
+## P0 Geometry Command
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 experiments/hc_causal_controls.py \
+  --suite geometry \
+  --output_dir outputs/hc_geometry
+```
 
 ## Server Command
 

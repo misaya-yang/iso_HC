@@ -316,6 +316,12 @@ class LMNextPhaseContractTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 ensure_run_is_new(run_dir)
 
+    def test_canonical_docs_name_static_proxy_and_causal_runner(self):
+        for path in ("README.md", "experiments/README.md", "agent.md"):
+            text = Path(path).read_text()
+            self.assertIn("static-birkhoff-hc", text)
+            self.assertIn("experiments/hc_causal_controls.py", text)
+
     def test_random_dataset_supports_offline_training_smoke(self):
         class DummyTokenizer:
             vocab_size = 257

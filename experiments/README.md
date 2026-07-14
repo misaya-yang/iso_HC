@@ -1,5 +1,36 @@
 # Experiments
 
+## P0 Causal Controls
+
+Offline CPU orchestration check:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 experiments/hc_causal_controls.py \
+  --suite p0-smoke \
+  --output_dir outputs/hc_p0_smoke \
+  --dataset random \
+  --total_tokens 4096 \
+  --batch_size 2 \
+  --no_compile
+```
+
+Server P0 run using existing data-disk caches:
+
+```bash
+/root/miniconda3/bin/python3 -u experiments/hc_causal_controls.py \
+  --suite p0-train \
+  --output_dir /root/autodl-tmp/isoHC/results/p0_causal_seed0 \
+  --dataset fineweb-edu \
+  --total_tokens 20000000 \
+  --batch_size 2 \
+  --train_cache_path /root/autodl-tmp/isoHC/data/lm_cache/HuggingFaceFW__fineweb-edu__sample-10BT_train_ctx512.pt \
+  --val_cache_path /root/autodl-tmp/isoHC/data/lm_cache/HuggingFaceFW__fineweb-edu__sample-10BT_train_heldout_ctx512.pt
+```
+
+The runner refuses completed output directories. Use a new output root for a
+rerun. `static-birkhoff-hc` is a static Sinkhorn proxy, not faithful dynamic
+mHC; `mhc` is retained only as a legacy alias.
+
 ## Canonical LM Pipeline
 
 Use this for the current paper line:
@@ -30,10 +61,12 @@ bash experiments/run_0525_mechanism_gpu_pipeline.sh
 ## Current Files
 
 - `lm_5090_next_runs.py`: 5090 FE/LM runner.
+- `hc_causal_controls.py`: P0 causal experiment matrix and safe orchestration.
 - `run_0525_mechanism_gpu_pipeline.sh`: safe server pipeline with data-disk
   cache paths, fair batch probing, checkpointed runs, and posthoc analysis.
 - `analyze_lm_mechanisms.py`: checkpoint posthoc analysis for gradient,
-  complement gain, complement removal, and replacement interventions.
+  complement gain, weak single-state removal, persistent complement scaling,
+  and replacement interventions.
 - `prepare_lm_data.py`: token cache preparation.
 - `stage1_projection_sanity.py`, `stage1_residual_only.py`,
   `stage2_precision_depth_suite.py`, `stage2_stability_detectors.py`: mechanism
