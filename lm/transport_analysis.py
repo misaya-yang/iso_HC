@@ -90,7 +90,7 @@ def collect_transport_report(source):
     first_H = matrices[0]["H"].detach().float()
     n = first_H.shape[0]
     U = mean_zero_basis(n, device=first_H.device, dtype=torch.float32)
-    composite = torch.eye(n - 1, device=first_H.device, dtype=torch.float32)
+    composite = torch.eye(n - 1, device=first_H.device, dtype=torch.float64)
     product_sv_min = 1.0
     product_sv_mean = 1.0
     product_sv_max = 1.0
@@ -109,7 +109,7 @@ def collect_transport_report(source):
         product_sv_min *= max(s_min, eps)
         product_sv_mean *= max(s_mean, eps)
         product_sv_max *= max(s_max, eps)
-        composite = B @ composite
+        composite = B.double() @ composite
         c = torch.linalg.svdvals(composite)
 
         step = {

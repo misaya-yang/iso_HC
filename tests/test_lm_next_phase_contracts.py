@@ -70,6 +70,11 @@ class LMNextPhaseContractTests(unittest.TestCase):
         )
         self.assertAlmostEqual(report["final"]["row_sum_error_max"], 0.0)
 
+        P = torch.ones(4, 4) / 4
+        contraction = P + 0.3 * (torch.eye(4) - P)
+        deep = collect_transport_report([contraction] * 96)
+        self.assertGreater(deep["final"]["composite_sv_min"], 0.0)
+
     def test_causal_mixer_controls_validate_ranges(self):
         with self.assertRaises(ValueError):
             MHCMixing(4, temperature=0.0)
