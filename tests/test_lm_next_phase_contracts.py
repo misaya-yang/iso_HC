@@ -284,6 +284,10 @@ class LMNextPhaseContractTests(unittest.TestCase):
         depth = build_suite_configs("p0-depth", **kwargs)
         self.assertEqual((len(smoke), len(train), len(depth)), (6, 14, 25))
         self.assertEqual(len({c["experiment_variant"] for c in depth}), 25)
+        self.assertEqual(
+            {c["num_layers"]: c["batch_size"] for c in depth},
+            {24: 29, 48: 20, 72: 16, 96: 14, 128: 12},
+        )
 
     def test_depth_summary_and_output_safety(self):
         report = build_depth_summary([{

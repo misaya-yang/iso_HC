@@ -19,15 +19,20 @@ from lm.transport_analysis import collect_transport_report
 
 
 DEPTH_PRESETS = {
-    24: {"d_model": 704, "num_heads": 8, "parameters": 178_516_487,
+    24: {"d_model": 704, "num_heads": 8, "batch_size": 29,
+         "parameters": 178_516_487,
          "num_transports": 48},
-    48: {"d_model": 512, "num_heads": 8, "parameters": 177_041_159,
+    48: {"d_model": 512, "num_heads": 8, "batch_size": 20,
+         "parameters": 177_041_159,
          "num_transports": 96},
-    72: {"d_model": 416, "num_heads": 8, "parameters": 170_703_431,
+    72: {"d_model": 416, "num_heads": 8, "batch_size": 16,
+         "parameters": 170_703_431,
          "num_transports": 144},
-    96: {"d_model": 368, "num_heads": 8, "parameters": 174_765_479,
+    96: {"d_model": 368, "num_heads": 8, "batch_size": 14,
+         "parameters": 174_765_479,
          "num_transports": 192},
-    128: {"d_model": 320, "num_heads": 8, "parameters": 173_618_055,
+    128: {"d_model": 320, "num_heads": 8, "batch_size": 12,
+          "parameters": 173_618_055,
           "num_transports": 256},
 }
 
@@ -225,6 +230,7 @@ def build_suite_configs(
             "num_layers": layers,
             "d_model": depth["d_model"],
             "num_heads": depth["num_heads"],
+            "batch_size": depth["batch_size"],
             "target_parameters": depth["parameters"],
             "expected_num_transports": depth["num_transports"],
         }

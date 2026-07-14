@@ -22,10 +22,13 @@ Server P0 run using existing data-disk caches:
   --output_dir /root/autodl-tmp/isoHC/results/p0_causal_seed0 \
   --dataset fineweb-edu \
   --total_tokens 20000000 \
-  --batch_size 2 \
+  --batch_size 20 \
   --train_cache_path /root/autodl-tmp/isoHC/data/lm_cache/HuggingFaceFW__fineweb-edu__sample-10BT_train_ctx512.pt \
   --val_cache_path /root/autodl-tmp/isoHC/data/lm_cache/HuggingFaceFW__fineweb-edu__sample-10BT_train_heldout_ctx512.pt
 ```
+
+`p0-depth` overrides the global batch per depth to stay below the calibrated
+28 GB limit: 24/48/72/96/128 layers use batch 29/20/16/14/12 respectively.
 
 The runner refuses completed output directories. Use a new output root for a
 rerun. `static-birkhoff-hc` is a static Sinkhorn proxy, not faithful dynamic
