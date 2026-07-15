@@ -94,8 +94,8 @@ class IsoHCMixing(StreamMixing):
     """IsoHC mixing: H^T H = I, H @ 1 = 1 (fixed-vector isometry).
 
     Uses Newton-Schulz polar decomposition with optional SVD fallback. The
-    tiny complement matrix is projected in float64 and returned in the caller
-    dtype by iso_ns_project.
+    tiny complement matrix is projected in float64 on CPU/CUDA and float32
+    on MPS, then returned in the caller dtype by iso_ns_project.
     """
 
     def __init__(self, n_streams, ns_steps=5, init_scale=0.01,
@@ -138,7 +138,7 @@ class IsoHCMixing(StreamMixing):
         return P + self.complement_scale * (H - P)
 
     def get_diagnostics(self):
-        H = self.forward().detach()
+        H = self.forward().detach().float().cpu()
         n = self.n_streams
         device = H.device
         ones = torch.ones(n, 1, device=device, dtype=torch.float32)
@@ -148,7 +148,7 @@ class IsoHCMixing(StreamMixing):
         fix_error = torch.norm(H @ ones - ones, p=2).item()
 
         # Singular values on 1_perp
-        U = self.U.to(device=device, dtype=torch.float32)
+        U = self.U.detach().to(device=device, dtype=torch.float32)
         A = U.T @ H @ U  # (n-1, n-1)
         s = torch.linalg.svdvals(A)
 
@@ -206,7 +206,7 @@ class MHCMixing(StreamMixing):
         return (1.0 - self.identity_blend) * eye + self.identity_blend * H
 
     def get_diagnostics(self):
-        H = self.forward().detach()
+        H = self.forward().detach().float().cpu()
         n = self.n_streams
         device = H.device
         ones = torch.ones(n, 1, device=device, dtype=torch.float32)

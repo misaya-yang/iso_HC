@@ -156,7 +156,7 @@ The old full-state stream cosine remains for backward comparison, and a new cent
 
 ### Dtype and method provenance
 
-The IsoHC documentation and result metadata state the implementation that actually ran: tiny complement matrices are projected in float64 inside `iso_ns_project` and converted back to the caller dtype. The summary also records `ns_steps`, `use_svd`, `svd_fallback`, caller parameter dtype, AMP dtype, and whether `torch.compile` was enabled. It does not describe the current path as `bf16_fp32_mix` or imply that a disabled SVD fallback ran.
+The IsoHC documentation and result metadata state the implementation that actually ran: tiny complement matrices are projected in float64 on CPU/CUDA and float32 on MPS, then converted back to the caller dtype. The summary also records `ns_steps`, `use_svd`, `svd_fallback`, caller parameter dtype, AMP dtype, and whether `torch.compile` was enabled. It does not imply that a disabled SVD fallback ran.
 
 Minimal Givens/Householder parameterization is deliberately deferred to P2. Replacing raw-polar IsoHC during P0 would change the optimizer geometry at the same time as the causal controls, defeating the purpose of the first experiment.
 

@@ -6,8 +6,8 @@ Presets:
   - 125m-smoke: 12L 768d/12h/T512, usually mHC vs IsoHC
   - headmix: 24L 384d/6h/T512, MHA head-output mixing ablation
 
-The runner favors production-like settings for the server: bf16 AMP, SDPA
-attention, torch.compile, and optional batch-size autotuning.
+The runner favors production-like settings for the server: native accelerator
+AMP, SDPA attention, torch.compile, and optional batch-size autotuning.
 """
 
 import argparse
@@ -22,6 +22,7 @@ import torch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from lm.data import create_dataloader, get_tokenizer
+from isohc.projection import projection_dtype_for_device
 from lm.diagnostics import (
     compute_centered_stream_cosine,
     compute_complement_participation_rank,
@@ -30,7 +31,7 @@ from lm.diagnostics import (
     compute_stream_cosine,
 )
 from lm.models import BaselineTransformer, TwoBranchHCTransformer
-from lm.train import run_experiment
+from lm.train import amp_autocast, amp_dtype_for_device, run_experiment
 from lm.transport_analysis import (
     collect_accessibility_report,
     collect_transport_report,
@@ -275,7 +276,7 @@ def _one_batch_memory_probe(model, batch_size, context_length, vocab_size, devic
     model.train()
     x = torch.randint(0, vocab_size, (batch_size, context_length), device=device)
     y = torch.randint(0, vocab_size, (batch_size, context_length), device=device)
-    with torch.amp.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
+    with amp_autocast(device, enabled=True):
         _, loss = model(x, y)
     loss.backward()
     model.zero_grad(set_to_none=True)
@@ -427,14 +428,15 @@ def gate_values(model):
 def runtime_provenance(model, config, device):
     is_iso = config["method"] in {"isohc", "scaled-isohc"}
     mixing = model.attn_mixings[0] if is_iso else None
+    amp_dtype = (
+        amp_dtype_for_device(device) if config.get("use_amp", True) else None
+    )
     return {
         "parameter_dtype": str(next(model.parameters()).dtype),
-        "amp_dtype": (
-            "torch.bfloat16"
-            if config.get("use_amp", True) and device.type == "cuda"
-            else None
+        "amp_dtype": str(amp_dtype) if amp_dtype is not None else None,
+        "projection_internal_dtype": (
+            str(projection_dtype_for_device(device)) if is_iso else None
         ),
-        "projection_internal_dtype": "torch.float64" if is_iso else None,
         "ns_steps": getattr(mixing, "ns_steps", None),
         "use_svd": getattr(mixing, "use_svd", None),
         "svd_fallback": getattr(mixing, "svd_fallback", None),
@@ -453,7 +455,11 @@ def write_run_summary(config, summary):
 
 def _execute_run(config, auto_batch, memory_target_gb):
     torch.manual_seed(config["seed"])
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(
+        "cuda" if torch.cuda.is_available()
+        else "mps" if torch.backends.mps.is_available()
+        else "cpu"
+    )
     if device.type == "cuda":
         torch.set_float32_matmul_precision("high")
         torch.backends.cuda.matmul.allow_tf32 = True

@@ -30,12 +30,24 @@ def cosine_lr_schedule(step, warmup_steps, total_steps, max_lr, min_lr):
     return min_lr + (max_lr - min_lr) * 0.5 * (1 + math.cos(math.pi * progress))
 
 
+def amp_dtype_for_device(device):
+    """Choose native mixed precision for the active accelerator."""
+    device = torch.device(device)
+    if device.type == "cuda":
+        major, _ = torch.cuda.get_device_capability(device)
+        return torch.bfloat16 if major >= 8 else torch.float16
+    if device.type == "mps":
+        return torch.bfloat16
+    return None
+
+
 def amp_autocast(device, enabled=True):
-    """bf16 autocast context for CUDA; no-op on CPU unless explicitly useful."""
+    """Accelerator autocast context; no-op on CPU."""
+    dtype = amp_dtype_for_device(device)
     return torch.amp.autocast(
         device_type=device.type,
-        dtype=torch.bfloat16,
-        enabled=enabled and device.type == "cuda",
+        dtype=dtype or torch.bfloat16,
+        enabled=enabled and dtype is not None,
     )
 
 
@@ -47,7 +59,8 @@ def train_epoch(model, dataloader, optimizer, device,
                 eval_fn=None, save_dir=None,
                 grad_accum_steps=1,
                 save_checkpoints=True,
-                save_best_checkpoints=True):
+                save_best_checkpoints=True,
+                scaler=None):
     """Train for one epoch (or until token budget exhausted).
 
     Args:
@@ -62,7 +75,7 @@ def train_epoch(model, dataloader, optimizer, device,
         max_lr: peak learning rate
         min_lr: minimum learning rate
         grad_clip: gradient clipping threshold
-        use_amp: use bfloat16 automatic mixed precision
+        use_amp: use accelerator-appropriate automatic mixed precision
         diagnostics: DiagnosticsCollector instance
         eval_every_steps: run eval every N steps
         eval_fn: function(model) -> metrics dict
@@ -117,7 +130,11 @@ def train_epoch(model, dataloader, optimizer, device,
             continue
 
         # Backward
-        (loss / grad_accum_steps).backward()
+        backward_loss = loss / grad_accum_steps
+        if scaler is None:
+            backward_loss.backward()
+        else:
+            scaler.scale(backward_loss).backward()
         accum_loss += loss.item()
         accum_micro_steps += 1
 
@@ -131,8 +148,14 @@ def train_epoch(model, dataloader, optimizer, device,
         if not should_step:
             continue
 
+        if scaler is not None:
+            scaler.unscale_(optimizer)
         torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-        optimizer.step()
+        if scaler is None:
+            optimizer.step()
+        else:
+            scaler.step(optimizer)
+            scaler.update()
 
         # Statistics
         batch_loss = accum_loss / max(accum_micro_steps, 1)
@@ -363,6 +386,13 @@ def run_experiment(model, train_loader, val_loader, config, device):
         print(f"  torch.compile: {compile_kwargs}")
         train_model = torch.compile(raw_model, **compile_kwargs)
 
+    scaler = None
+    if (
+        config.get('use_amp', True)
+        and amp_dtype_for_device(device) == torch.float16
+    ):
+        scaler = torch.amp.GradScaler("cuda")
+
     # Eval function
     def eval_fn(m):
         return evaluate(m, val_loader, device,
@@ -390,6 +420,7 @@ def run_experiment(model, train_loader, val_loader, config, device):
             grad_accum_steps=grad_accum_steps,
             save_checkpoints=config.get('save_checkpoints', True),
             save_best_checkpoints=config.get('save_best_checkpoints', True),
+            scaler=scaler,
         )
         all_metrics.append(metrics)
         epoch += 1

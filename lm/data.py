@@ -16,7 +16,9 @@ from torch.utils.data import Dataset, DataLoader
 def load_token_cache(cache_path):
     """Load token cache with mmap when supported to reduce CPU RAM pressure."""
     try:
-        token_ids = torch.load(cache_path, map_location='cpu', mmap=True)
+        token_ids = torch.load(
+            cache_path, map_location='cpu', mmap=True, weights_only=True
+        )
     except TypeError:
         token_ids = torch.load(cache_path, map_location='cpu')
     if isinstance(token_ids, dict):
@@ -46,14 +48,31 @@ class TokenizedTextDataset(Dataset):
     """
 
     def __init__(self, token_ids, context_length):
+        if not isinstance(token_ids, torch.Tensor):
+            raise TypeError("token_ids must be a torch.Tensor")
+        if token_ids.ndim not in (1, 2):
+            raise ValueError("token_ids must be a 1D token stream or 2D row cache")
+        if context_length < 1:
+            raise ValueError("context_length must be positive")
+        if token_ids.ndim == 2 and token_ids.shape[1] < 2:
+            raise ValueError("row caches need at least two tokens per row")
         self.token_ids = token_ids
-        self.context_length = context_length
+        self.context_length = (
+            min(context_length, token_ids.shape[1] - 1)
+            if token_ids.ndim == 2
+            else context_length
+        )
 
     def __len__(self):
+        if self.token_ids.ndim == 2:
+            return self.token_ids.shape[0]
         return max(0, len(self.token_ids) - self.context_length)
 
     def __getitem__(self, idx):
-        chunk = self.token_ids[idx:idx + self.context_length + 1]
+        if self.token_ids.ndim == 2:
+            chunk = self.token_ids[idx, :self.context_length + 1]
+        else:
+            chunk = self.token_ids[idx:idx + self.context_length + 1]
         x = chunk[:-1].long()
         y = chunk[1:].long()
         return x, y

@@ -22,9 +22,10 @@ from lm.diagnostics import (
 )
 from lm.data import create_dataloader, save_token_cache, TokenizedTextDataset
 from lm.headmix import HeadOutputMixing
+from isohc.projection import iso_ns_project, projection_dtype_for_device
 from lm.mixing import IsoHCMixing, MHCMixing
 from lm.models import CausalSelfAttention, TwoBranchHCTransformer
-from lm.train import run_experiment
+from lm.train import amp_dtype_for_device, run_experiment, train_epoch
 from lm.transport_analysis import (
     collect_accessibility_report,
     complement_spectrum,
@@ -53,6 +54,49 @@ from experiments.hc_causal_controls import (
 
 
 class LMNextPhaseContractTests(unittest.TestCase):
+    def test_projection_dtype_and_mps_fallback(self):
+        self.assertEqual(projection_dtype_for_device("cpu"), torch.float64)
+        self.assertEqual(projection_dtype_for_device("mps"), torch.float32)
+        if not torch.backends.mps.is_available():
+            return
+        raw = (
+            torch.eye(4, device="mps")
+            + 0.01 * torch.randn(4, 4, device="mps")
+        ).requires_grad_()
+        H = iso_ns_project(raw, steps=5, svd_fallback=False)
+        H.square().sum().backward()
+        ones = torch.ones(4, 1, device="mps")
+        self.assertLess(torch.norm(H @ ones - ones).item(), 1e-5)
+        self.assertLess(
+            torch.norm(H.T @ H - torch.eye(4, device="mps")).item(),
+            1e-5,
+        )
+        self.assertTrue(torch.isfinite(raw.grad).all().item())
+
+        model = TwoBranchHCTransformer(
+            vocab_size=32,
+            d_model=16,
+            num_layers=1,
+            num_heads=4,
+            n_streams=4,
+            context_length=8,
+            mixing_type="isohc",
+        ).to("mps")
+        transport = collect_transport_report(model)
+        access = collect_accessibility_report(model)
+        self.assertEqual(transport["num_transports"], 2)
+        self.assertEqual(access["complement_dim"], 3)
+        self.assertEqual(len(model.get_diagnostics()), 2)
+        self.assertTrue(math.isfinite(
+            MHCMixing(4).to("mps").get_diagnostics()["sv_min_1perp"]
+        ))
+        states = model.get_stream_states(
+            torch.randint(0, 32, (1, 8), device="mps")
+        )
+        self.assertTrue(math.isfinite(
+            compute_complement_participation_rank(states[-1])
+        ))
+
     def test_causal_mixer_controls_and_exact_transport_geometry(self):
         torch.manual_seed(31)
         base = MHCMixing(4, noise_std=0.0)
@@ -258,6 +302,66 @@ class LMNextPhaseContractTests(unittest.TestCase):
         self.assertFalse(provenance["use_svd"])
         self.assertTrue(provenance["svd_fallback"])
         self.assertIsNone(provenance["amp_dtype"])
+
+        with patch("torch.cuda.get_device_capability", return_value=(7, 5)):
+            t4 = runtime_provenance(model, cfg, torch.device("cuda"))
+        self.assertEqual(t4["amp_dtype"], "torch.float16")
+
+    def test_amp_dtype_and_fp16_scaler_path(self):
+        with patch("torch.cuda.get_device_capability", return_value=(7, 5)):
+            self.assertEqual(
+                amp_dtype_for_device(torch.device("cuda")), torch.float16
+            )
+        with patch("torch.cuda.get_device_capability", return_value=(8, 0)):
+            self.assertEqual(
+                amp_dtype_for_device(torch.device("cuda")), torch.bfloat16
+            )
+        self.assertEqual(amp_dtype_for_device(torch.device("mps")), torch.bfloat16)
+        self.assertIsNone(amp_dtype_for_device(torch.device("cpu")))
+
+        calls = []
+
+        class RecordingScaler:
+            def scale(self, loss):
+                calls.append("scale")
+                return loss
+
+            def unscale_(self, optimizer):
+                calls.append("unscale")
+
+            def step(self, optimizer):
+                calls.append("step")
+                optimizer.step()
+
+            def update(self):
+                calls.append("update")
+
+        class TinyLM(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.embedding = nn.Embedding(8, 4)
+                self.proj = nn.Linear(4, 8)
+
+            def forward(self, x, y=None):
+                logits = self.proj(self.embedding(x))
+                loss = F.cross_entropy(
+                    logits.reshape(-1, 8), y.reshape(-1)
+                )
+                return logits, loss
+
+        model = TinyLM()
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+        x = torch.randint(0, 8, (2, 2))
+        loader = DataLoader(TensorDataset(x, x), batch_size=2)
+        metrics = train_epoch(
+            model, loader, optimizer, torch.device("cpu"),
+            epoch=0, total_tokens_target=4, tokens_per_step=4,
+            warmup_steps=0, max_lr=0.01, min_lr=0.01,
+            use_amp=False, save_checkpoints=False,
+            scaler=RecordingScaler(),
+        )
+        self.assertEqual(metrics["steps"], 1)
+        self.assertEqual(calls, ["scale", "unscale", "step", "update"])
 
     def test_persistent_scale_one_is_an_exact_paired_noop(self):
         torch.manual_seed(41)
@@ -498,6 +602,17 @@ class LMNextPhaseContractTests(unittest.TestCase):
             self.assertIsInstance(dataset, TokenizedTextDataset)
             self.assertEqual(x.shape, (2, 8))
             self.assertEqual(y.shape, (2, 8))
+
+    def test_row_token_cache_preserves_sample_boundaries(self):
+        rows = torch.arange(15).reshape(3, 5)
+        dataset = TokenizedTextDataset(rows, context_length=4)
+
+        x, y = dataset[1]
+
+        self.assertEqual(len(dataset), 3)
+        self.assertEqual(dataset.context_length, 4)
+        self.assertTrue(torch.equal(x, rows[1, :-1]))
+        self.assertTrue(torch.equal(y, rows[1, 1:]))
 
     def test_attention_uses_scaled_dot_product_attention_when_flash_enabled(self):
         calls = []

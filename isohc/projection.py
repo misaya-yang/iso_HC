@@ -8,11 +8,25 @@ import torch.nn as nn
 _U_CACHE = {}
 
 
+def projection_dtype_for_device(device):
+    """Use float32 on MPS, which does not support float64."""
+    return (
+        torch.float32
+        if torch.device(device).type == "mps"
+        else torch.float64
+    )
+
+
 def get_cached_U(n, device, dtype=torch.float32):
     """Get cached orthogonal complement basis U for dimension n."""
     key = (n, device, dtype)
     if key not in _U_CACHE:
-        _U_CACHE[key] = construct_orthogonal_complement(n, device=device, dtype=dtype)
+        build_device = (
+            "cpu" if torch.device(device).type == "mps" else device
+        )
+        _U_CACHE[key] = construct_orthogonal_complement(
+            n, device=build_device, dtype=dtype
+        ).to(device)
     return _U_CACHE[key]
 
 
@@ -141,10 +155,8 @@ def iso_ns_project(
     device = H_raw.device
     dtype = H_raw.dtype
 
-    # Internal computation uses float64 for the tiny stream matrices in Stage 1.
-    # Returning to the caller's dtype preserves the model interface while keeping
-    # fixed-vector drift small across hundreds of residual-only layers.
-    projection_dtype = torch.float64
+    # MPS has no float64 support; CPU/CUDA keep the higher-precision path.
+    projection_dtype = projection_dtype_for_device(device)
     H_raw_f = H_raw.to(projection_dtype)
 
     if U is None:

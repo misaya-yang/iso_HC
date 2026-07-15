@@ -85,7 +85,10 @@ def collect_transport_report(source):
       - prefix: actual singular values of U^T H_k...H_1 U and the simpler
         product-of-single-step summaries.
     """
-    matrices = _coerce_named_matrices(source)
+    matrices = [
+        {**item, "H": item["H"].detach().cpu()}
+        for item in _coerce_named_matrices(source)
+    ]
     if not matrices:
         return {"steps": [], "prefix": []}
 
@@ -183,7 +186,6 @@ def collect_accessibility_report(model, eps=1e-12):
     """
     required = (
         "get_named_mixing_matrices",
-        "_make_stream_vector",
         "attn_readout_weights",
         "attn_injection_weights",
         "mlp_readout_weights",
@@ -195,12 +197,22 @@ def collect_accessibility_report(model, eps=1e-12):
 
     n = int(model.n_streams)
     complement_dim = max(0, n - 1)
-    device = next(model.parameters()).device
+    device = torch.device("cpu")
     U = mean_zero_basis(n, device=device, dtype=torch.float64)
     matrices = {
-        (item["branch"], int(item["layer"])): item["H"].detach().double()
+        (item["branch"], int(item["layer"])): (
+            item["H"].detach().cpu().double()
+        )
         for item in model.get_named_mixing_matrices()
     }
+
+    def stream_vector(weights, lambda_param):
+        weights = weights.detach().cpu().double()
+        scale = lambda_param.detach().cpu().double()
+        return torch.ones(n, dtype=torch.float64) + scale * (
+            weights - weights.mean()
+        )
+
     steps = []
     Bs = []
     alphas = []
@@ -211,12 +223,8 @@ def collect_accessibility_report(model, eps=1e-12):
             ("attn", model.attn_readout_weights, model.attn_injection_weights),
             ("mlp", model.mlp_readout_weights, model.mlp_injection_weights),
         ):
-            a = model._make_stream_vector(
-                readouts[layer], model.readout_lambda
-            ).double()
-            b = model._make_stream_vector(
-                injections[layer], model.injection_lambda
-            ).double()
+            a = stream_vector(readouts[layer], model.readout_lambda)
+            b = stream_vector(injections[layer], model.injection_lambda)
             a_perp = U.T @ (a - a.mean())
             b_perp = U.T @ (b - b.mean())
             alpha = a_perp / n
@@ -237,9 +245,9 @@ def collect_accessibility_report(model, eps=1e-12):
                 ).item(),
             })
 
-    final_a = model._make_stream_vector(
+    final_a = stream_vector(
         model.readout_final, model.readout_final_lambda
-    ).double()
+    )
     final_a_perp = U.T @ (final_a - final_a.mean())
     final_alpha = final_a_perp / n
     alphas.append(final_alpha)

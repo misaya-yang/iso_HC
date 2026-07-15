@@ -100,7 +100,9 @@ def compute_complement_participation_rank(X, eps=1e-12):
     s = X.shape[0]
     if s <= 1:
         return 0.0
-    centered = (X - X.mean(dim=0, keepdim=True)).reshape(s, -1).double()
+    centered = (
+        X - X.mean(dim=0, keepdim=True)
+    ).reshape(s, -1).detach().cpu().double()
     covariance = centered @ centered.T / max(centered.shape[1], 1)
     eigenvalues = torch.linalg.eigvalsh(covariance).clamp_min(0.0)
     total = eigenvalues.sum()
