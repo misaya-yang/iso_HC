@@ -1,0 +1,19 @@
+{
+ "method": "baseline",
+ "lam": 0.01,
+ "diag_bias": 4.0,
+ "seed": 1,
+ "layers": 16,
+ "d": 64,
+ "heads": 4,
+ "ctx": 64,
+ "batch": 32,
+ "steps": 1200,
+ "lr": 0.003,
+ "hc_wd": 0.0,
+ "out": "runs/baseline_lam0.01_db4_s1.json",
+ "threads": 1,
+ "scaled_init": false,
+ "train_time": 475.2121675014496,
+ "val_loss": 1.868905521929264
+}
