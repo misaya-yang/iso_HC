@@ -30,6 +30,7 @@ from lm.diagnostics import (
     compute_mean_zero_norm_ratio,
     compute_stream_cosine,
 )
+from lm.adjoint import AdjointHCTransformer
 from lm.models import BaselineTransformer, TwoBranchHCTransformer
 from lm.train import amp_autocast, amp_dtype_for_device, run_experiment
 from lm.transport_analysis import (
@@ -155,6 +156,24 @@ def freeze_access_gates(model):
     ):
         getattr(model, name).requires_grad_(False)
 
+# Mechanism controls retain the same two-stream state allocation.
+ADJOINT_VARIANTS = {
+    "adjoint-hc": {
+        "routing": "dynamic", "carrier": "signed", "freeze_aux_updates": False
+    },
+    "adjoint-hc-static": {
+        "routing": "static", "carrier": "signed", "freeze_aux_updates": False
+    },
+    "adjoint-hc-frozen-aux": {
+        "routing": "dynamic", "carrier": "signed", "freeze_aux_updates": True
+    },
+    "adjoint-hc-zero-carrier": {
+        "routing": "dynamic", "carrier": "zero", "freeze_aux_updates": False
+    },
+    "adjoint-hc-copy-carrier": {
+        "routing": "dynamic", "carrier": "copy", "freeze_aux_updates": False
+    },
+}
 
 def build_preset_configs(
     preset,
@@ -207,6 +226,10 @@ def build_preset_configs(
             "save_checkpoints": True,
             "save_dir": os.path.join(output_dir, f"{preset}_{method}_seed{seed}"),
         }
+        if method in ADJOINT_VARIANTS:
+            if preset == "headmix":
+                raise ValueError("Adjoint methods are residual experiments; use a non-headmix preset")
+            cfg.update(ADJOINT_VARIANTS[method], n_streams=2)
         configs.append(cfg)
     return configs
 
@@ -216,7 +239,27 @@ def create_model(config, vocab_size, device):
     method = config["method"]
     head_mixing_type = HEADMIX_TYPES.get(method)
 
-    if config["preset"] == "headmix" or method in HEADMIX_TYPES:
+    if method in ADJOINT_VARIANTS:
+        if config["preset"] == "headmix":
+            raise ValueError("Adjoint methods are residual experiments; use a non-headmix preset")
+        if config.get("n_streams", 2) != 2:
+            raise ValueError("Adjoint methods require n_streams=2 in the recorded config")
+        variant = ADJOINT_VARIANTS[method]
+        for key, value in variant.items():
+            if key in config and config[key] != value:
+                raise ValueError(f"Method {method} requires {key}={value!r}")
+        model = AdjointHCTransformer(
+            vocab_size=vocab_size,
+            d_model=config["d_model"],
+            num_layers=config["num_layers"],
+            num_heads=config["num_heads"],
+            context_length=config["context_length"],
+            mlp_ratio=config["mlp_ratio"],
+            dropout=config["dropout"],
+            use_flash=config["use_flash"],
+            **variant,
+        )
+    elif config["preset"] == "headmix" or method in HEADMIX_TYPES:
         model = BaselineTransformer(
             vocab_size=vocab_size,
             d_model=config["d_model"],

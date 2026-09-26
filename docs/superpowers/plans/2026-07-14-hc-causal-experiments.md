@@ -1,3 +1,10 @@
+<!-- doc-status: historical -->
+> **Historical plan from 2026-07-14:** retained for provenance; its task steps,
+> launch directions, and subskill instructions are not current. Follow the
+> [current research owner](../../research/README.md) and
+> [current experiment plan](../../research/roadmap.md).
+
+<!-- doc-history-body-begins -->
 # HC Causal Experiments Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking. In this repository, inline execution is the default unless the user explicitly authorizes subagents.

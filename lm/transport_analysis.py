@@ -23,7 +23,11 @@ def mean_zero_basis(n_streams, device=None, dtype=torch.float32):
 
 
 def complement_spectrum(H, U=None):
-    """Singular values of a stream mixer restricted to 1_perp."""
+    """Singular values of the compression U^T H U to 1_perp.
+
+    This is an invariant-subspace restriction only if H maps 1_perp into itself.
+    Otherwise the compression omits signal that H transports into the mean.
+    """
     H = H.detach().float()
     n = H.shape[0]
     if H.shape != (n, n):
@@ -81,25 +85,50 @@ def collect_transport_report(source):
     """Collect per-step and prefix-product complement gain diagnostics.
 
     Returns a JSON-serializable dict with:
-      - steps: single-mixer 1_perp singular values.
-      - prefix: actual singular values of U^T H_k...H_1 U and the simpler
-        product-of-single-step summaries.
+      - steps: singular values of each compression B_i = U^T H_i U, plus
+        mean_preservation_error = ||H_i^T e0 - e0||_2 for unit mean vector e0.
+      - prefix: composite_sv_* describes U^T (H_k...H_1) U, while
+        projected_step_product_sv_* describes B_k...B_1.  These agree when
+        each H_i preserves 1_perp; otherwise only the full product retains
+        excursions through the mean direction.
+
+    The historical product_sv_* fields multiply per-step singular-value
+    summaries, with each factor floored at 1e-12.  They are diagnostics, not
+    general bounds on composite_sv_*; even without the floor the mean product
+    is not a spectral bound.  Min/max product bounds apply to B_k...B_1 before
+    flooring, and also describe the full compression when 1_perp is invariant.
+
+    Schema version 2 corrects composite_sv_*: older reports used B_k...B_1
+    under that name and must be recomputed for non-invariant mixers.
     """
     matrices = [
         {**item, "H": item["H"].detach().cpu()}
         for item in _coerce_named_matrices(source)
     ]
+    metadata = {
+        "schema_version": 2,
+        "operators": {
+            "composite": "U^T (H_k ... H_1) U",
+            "projected_step_product": "(U^T H_k U) ... (U^T H_1 U)",
+        },
+        "product_sv_floor": 1e-12,
+    }
     if not matrices:
-        return {"steps": [], "prefix": []}
+        return {**metadata, "steps": [], "prefix": []}
 
     first_H = matrices[0]["H"].detach().float()
     n = first_H.shape[0]
     U = mean_zero_basis(n, device=first_H.device, dtype=torch.float32)
-    composite = torch.eye(n - 1, device=first_H.device, dtype=torch.float64)
+    e0 = torch.ones(n, device=first_H.device, dtype=torch.float64) / n ** 0.5
+    U64 = U.double()
+    composite = torch.eye(n, device=first_H.device, dtype=torch.float64)
+    projected_step_product = torch.eye(
+        n - 1, device=first_H.device, dtype=torch.float64
+    )
     product_sv_min = 1.0
     product_sv_mean = 1.0
     product_sv_max = 1.0
-    eps = 1e-12
+    eps = metadata["product_sv_floor"]
 
     steps = []
     prefix = []
@@ -114,14 +143,19 @@ def collect_transport_report(source):
         product_sv_min *= max(s_min, eps)
         product_sv_mean *= max(s_mean, eps)
         product_sv_max *= max(s_max, eps)
-        composite = B.double() @ composite
-        c = torch.linalg.svdvals(composite)
+        composite = H.double() @ composite
+        c = torch.linalg.svdvals(U64.T @ composite @ U64)
+        projected_step_product = B.double() @ projected_step_product
+        projected_s = torch.linalg.svdvals(projected_step_product)
 
         step = {
             "index": int(item.get("index", index)),
             "branch": item.get("branch", "transport"),
             "layer": int(item.get("layer", index)),
             **stats,
+            "mean_preservation_error": torch.norm(
+                H.double().T @ e0 - e0
+            ).item(),
         }
         steps.append(step)
         prefix.append({
@@ -132,6 +166,10 @@ def collect_transport_report(source):
             "composite_sv_min": c.min().item(),
             "composite_sv_mean": c.mean().item(),
             "composite_sv_max": c.max().item(),
+            "projected_step_product_singular_values": projected_s.cpu().tolist(),
+            "projected_step_product_sv_min": projected_s.min().item(),
+            "projected_step_product_sv_mean": projected_s.mean().item(),
+            "projected_step_product_sv_max": projected_s.max().item(),
             "product_sv_min": product_sv_min,
             "product_sv_mean": product_sv_mean,
             "product_sv_max": product_sv_max,
@@ -143,10 +181,12 @@ def collect_transport_report(source):
         "perp_to_mean_leakage",
         "row_sum_error",
         "col_sum_error",
+        "mean_preservation_error",
     ):
         final[f"{key}_max"] = max(step[key] for step in steps)
 
     return {
+        **metadata,
         "n_streams": n,
         "num_transports": len(matrices),
         "steps": steps,

@@ -1,3 +1,8 @@
+<!-- doc-status: historical -->
+> **历史记录：不再作为当前研究判断、投稿主张或执行计划。**
+> 本文原文与数值保留；当前解释见[证据台账](../../research/evidence.md)，理论边界见[理论基础](../../research/theory.md)，研究目标与下一实验以[当前主线](../../research/README.md)和[实验计划](../../research/roadmap.md)为准。本文旧启动、删除、工具调用与投稿指令不再生效。
+
+<!-- doc-history-body-begins -->
 # IsoHC Project Cleanup Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

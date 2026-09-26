@@ -1,0 +1,125 @@
+{
+  "seed": 20260925,
+  "precision": "torch.float64",
+  "device": "cpu",
+  "python": "3.9.6",
+  "torch": "2.8.0",
+  "training_performed": false,
+  "contract_scope": "Functional slot-memory prototype and numerical mathematical checks; no model integration, optimization, benchmark, learned controller, or SOTA evidence.",
+  "checks": [
+    {
+      "name": "protected_rows_are_bitwise_unchanged",
+      "passed": true,
+      "protected_slots": [
+        0,
+        3,
+        4
+      ],
+      "committed_slot": 2
+    },
+    {
+      "name": "commit_updates_one_slot_and_metadata_atomically",
+      "passed": true,
+      "scope": "Invalid slot values are treated as zero despite nonzero backing storage. Commits increment slot version; expired slots retain validity until overwritten."
+    },
+    {
+      "name": "convex_slot_bound_over_4096_steps",
+      "passed": true,
+      "radius": 1.7,
+      "maximum_row_or_workspace_norm": 1.7000000000000006,
+      "maximum_protected_error": 0.0,
+      "commits": 3641,
+      "rejections": 455,
+      "tolerance": 1e-12,
+      "scope": "Bounded state under arbitrary sampled proposals; no claim about training gradients."
+    },
+    {
+      "name": "all_protected_rejects_commit_but_workspace_progresses",
+      "passed": true,
+      "scope": "Current branch proposal remains usable; this does not prove a full network avoids stalls."
+    },
+    {
+      "name": "expiry_reuses_capacity_without_corrupting_live_slot",
+      "passed": true,
+      "expiry_boundary": 5,
+      "reused_slot": 0
+    },
+    {
+      "name": "frozen_controls_and_proposal_have_diagonal_nonexpansive_transport",
+      "passed": true,
+      "maximum_error": 0.0,
+      "diagonal": [
+        1.0,
+        0.30000000000000004,
+        1.0
+      ],
+      "operator_norm": 1.0,
+      "scope": "Partial derivative through memory carry only; controls and proposal fixed."
+    },
+    {
+      "name": "bounded_state_does_not_imply_stable_full_jacobian",
+      "passed": true,
+      "full_scalar_derivative_at_zero": 4.5,
+      "update": "x_next = 0.5*x + 0.5*tanh(8*x), for x in [-1,1]",
+      "scope": "Counterexample: controller/branch derivatives must be studied separately."
+    },
+    {
+      "name": "protected_view_nullspace_write_can_be_nonnormal_and_amplifying",
+      "passed": true,
+      "protected_view": [
+        1.0,
+        0.0
+      ],
+      "write_direction": [
+        0.0,
+        3.0
+      ],
+      "read_key": [
+        1.0,
+        0.0
+      ],
+      "transport": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          3.0,
+          1.0
+        ]
+      ],
+      "spectral_radius": 1.0,
+      "operator_norm": 3.302775637731995,
+      "gain_after_16_steps": 48.010415536631214,
+      "scope": "Read invariance alone gives no Euclidean norm bound; motivates coordinate slots plus bounded convex writes."
+    },
+    {
+      "name": "reference_step_is_causal_under_identical_input_prefix",
+      "passed": true,
+      "identical_prefix_steps": 7,
+      "changed_future_steps": 5,
+      "scope": "Reference step and supplied current-only controls; not a learned-controller causality audit."
+    },
+    {
+      "name": "external_lease_trace_capacity_tracks_concurrent_live_versions",
+      "passed": true,
+      "total_writes": 64,
+      "maximum_concurrent_live_versions": 3,
+      "slots": 3,
+      "rejected_at_peak_capacity": 0,
+      "rejected_with_one_fewer_slot": 16,
+      "lifetime_rule": "write at t, expiry t+1+(t mod 4), half-open lifetime",
+      "scope": "Exact retention for externally supplied leases and distinct versions in this trace. No learned lease, semantic compression, task gain, or general performance claim."
+    },
+    {
+      "name": "minimum_predicted_risk_regret_is_at_most_twice_error_bound",
+      "passed": true,
+      "samples": 1024,
+      "assumed_uniform_prediction_error_bound": 0.075,
+      "theoretical_regret_bound": 0.15,
+      "maximum_sampled_regret": 0.12177387934052308,
+      "scope": "Elementary selection bound conditional on known uniform error; no estimator calibration or learned eviction evidence."
+    }
+  ],
+  "passed": true
+}

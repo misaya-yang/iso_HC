@@ -1,0 +1,1553 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-09-25",
+  "audit_base_commit": "d4af4d6",
+  "audit_base_branch": "main",
+  "scope": "Historical LM/GNN evidence, source audit, independent gauge/WD/transport checks, retired RDM primitives, and implemented adjoint residual with completed synthetic NTP integration training and local CPU costs. No new natural-language or GPU training; no SOTA evidence.",
+  "status_definitions": {
+    "local_raw_checked": "本轮读取并核对本地历史JSON/log；不是本轮训练复现",
+    "local_code_checked": "核查当前源码；不自动证明历史运行身份",
+    "historical_report_only": "历史Markdown摘要，未核对逐次原始记录",
+    "attachment_reported_unverified": "仅附件报告，当前checkout缺原验证资产",
+    "new_local_verification": "本轮实际执行且有命令/结果的离线检查；不得等同训练证据",
+    "local_integration_training": "本轮实际优化完整模型，有配置和逐步本地回执；合成训练集成证据，不等于自然语言收益或规模化稳定性"
+  },
+  "source_path_policy": "source_paths are repository-relative; missing_assets are explicitly absent or unrecovered assets, not supporting sources. Local untracked raw files may not survive a fresh clone.",
+  "entries": [
+    {
+      "id": "E-LM24",
+      "status": "local_raw_checked",
+      "claim": "TinyStories 24L单seed中IsoHC未优于mHC，unconstrained最佳；baseline批量和更新次数不同。",
+      "source_paths": [
+        "docs/0605_alldoc/0524_lm_experiment_report.md",
+        "docs/0605_alldoc/0524_results_raw/0524_deep_stress_512/deep-stress-512_baseline_seed0/run_summary.json",
+        "docs/0605_alldoc/0524_results_raw/0524_deep_stress_512/deep-stress-512_isohc_seed0/run_summary.json",
+        "docs/0605_alldoc/0524_results_raw/0524_deep_stress_512/deep-stress-512_mhc_seed0/run_summary.json",
+        "docs/0605_alldoc/0524_results_raw/0524_deep_stress_512/deep-stress-512_unconstrained_seed0/run_summary.json",
+        "docs/0605_alldoc/0524_results_raw/0524_deep_stress_512/runner.out"
+      ],
+      "limits": [
+        "本轮只核对历史记录，未重跑训练。",
+        "仅seed0，无跨seed统计；历史吞吐依赖具体实现和运行配置。",
+        "静态proxy，不能外推为faithful动态mHC/oHC结论。",
+        "baseline为batch48而HC为12；顶层summary仅含IsoHC补跑。"
+      ],
+      "measurements": [
+        {
+          "method": "baseline",
+          "seed": 0,
+          "num_layers": 24,
+          "d_model": 512,
+          "num_heads": 8,
+          "n_streams": 4,
+          "context_length": 512,
+          "batch_size": 48,
+          "actual_tokens": 20004864,
+          "optimizer_steps": 814,
+          "tokens_per_second": 153891.18872253335,
+          "val_loss": 2.431164813041687,
+          "val_ppl": 11.372120762785567,
+          "eval_batches": 20,
+          "weight_decay": 0.1,
+          "mean_zero_energy_final": null,
+          "h_diagnostics": {}
+        },
+        {
+          "method": "isohc",
+          "seed": 0,
+          "num_layers": 24,
+          "d_model": 512,
+          "num_heads": 8,
+          "n_streams": 4,
+          "context_length": 512,
+          "batch_size": 12,
+          "actual_tokens": 20004864,
+          "optimizer_steps": 3256,
+          "tokens_per_second": 67538.65511755041,
+          "val_loss": 2.2601830840110777,
+          "val_ppl": 9.584843837788748,
+          "eval_batches": 20,
+          "weight_decay": 0.1,
+          "mean_zero_energy_final": 0.18111389875411987,
+          "h_diagnostics": {
+            "fix_error_mean": 2.8097836413110144e-07,
+            "layer_mean": 11.5,
+            "orth_error_mean": 0.000597399905018392,
+            "sv_max_1perp_mean": 1.0001270125309627,
+            "sv_mean_1perp_mean": 0.9999719075858593,
+            "sv_min_1perp_mean": 0.9998201169073582,
+            "fix_error_max": 3.475518042250769e-07,
+            "layer_max": 23.0,
+            "orth_error_max": 0.0008569937781430781,
+            "sv_max_1perp_max": 1.0002782344818115,
+            "sv_mean_1perp_max": 1.0001310110092163,
+            "sv_min_1perp_max": 1.0000630617141724
+          }
+        },
+        {
+          "method": "mhc",
+          "seed": 0,
+          "num_layers": 24,
+          "d_model": 512,
+          "num_heads": 8,
+          "n_streams": 4,
+          "context_length": 512,
+          "batch_size": 12,
+          "actual_tokens": 20004864,
+          "optimizer_steps": 3256,
+          "tokens_per_second": 30633.481010327258,
+          "val_loss": 2.2486640095710753,
+          "val_ppl": 9.475068775509103,
+          "eval_batches": 20,
+          "weight_decay": 0.1,
+          "mean_zero_energy_final": 0.06680396944284439,
+          "h_diagnostics": {
+            "col_sum_err_mean": 2.5094366229438947e-07,
+            "entropy_mean": 0.22018251307233427,
+            "layer_mean": 11.5,
+            "neg_ratio_mean": 0.0,
+            "row_sum_err_mean": 0.006142647930876895,
+            "sv_max_1perp_mean": 0.9184218843777975,
+            "sv_mean_1perp_mean": 0.9156286492943764,
+            "sv_min_1perp_mean": 0.9130150328079859,
+            "col_sum_err_max": 4.129530850605079e-07,
+            "entropy_max": 0.2367092244239437,
+            "layer_max": 23.0,
+            "neg_ratio_max": 0.0,
+            "row_sum_err_max": 0.011390423402190208,
+            "sv_max_1perp_max": 0.9257681369781494,
+            "sv_mean_1perp_max": 0.9243165850639343,
+            "sv_min_1perp_max": 0.9229450821876526
+          }
+        },
+        {
+          "method": "unconstrained",
+          "seed": 0,
+          "num_layers": 24,
+          "d_model": 512,
+          "num_heads": 8,
+          "n_streams": 4,
+          "context_length": 512,
+          "batch_size": 12,
+          "actual_tokens": 20004864,
+          "optimizer_steps": 3256,
+          "tokens_per_second": 40914.29174459847,
+          "val_loss": 2.196443557739258,
+          "val_ppl": 8.992973567875111,
+          "eval_batches": 20,
+          "weight_decay": 0.1,
+          "mean_zero_energy_final": 0.34981638193130493,
+          "h_diagnostics": {
+            "fix_error_mean": 0.14884839237978062,
+            "layer_mean": 11.5,
+            "orth_error_mean": 0.2581609773139159,
+            "fix_error_max": 1.3189228773117065,
+            "layer_max": 23.0,
+            "orth_error_max": 1.7637574672698975
+          }
+        }
+      ],
+      "approx_parameter_count": 101520000,
+      "parameter_count_provenance": "historical runner log rounded to 0.01M",
+      "missing_assets": [
+        "本地可加载训练checkpoint"
+      ]
+    },
+    {
+      "id": "E-LM48",
+      "status": "local_raw_checked",
+      "claim": "FE 48L同batch单seed中IsoHC略优于mHC但不及identity-HC，unconstrained最佳；IsoHC吞吐约为identity的65.5%。",
+      "source_paths": [
+        "docs/0605_alldoc/0525_fe48_overnight_report.md",
+        "docs/0605_alldoc/0525_results_raw/0525_fe_fair_deep48_p33013_20m/fe-deep-48l-512_baseline_seed0/run_summary.json",
+        "docs/0605_alldoc/0525_results_raw/0525_fe_fair_deep48_p33013_20m/fe-deep-48l-512_identity-hc_seed0/run_summary.json",
+        "docs/0605_alldoc/0525_results_raw/0525_fe_fair_deep48_p33013_20m/fe-deep-48l-512_isohc_seed0/run_summary.json",
+        "docs/0605_alldoc/0525_results_raw/0525_fe_fair_deep48_p33013_20m/fe-deep-48l-512_mhc_seed0/run_summary.json",
+        "docs/0605_alldoc/0525_results_raw/0525_fe_fair_deep48_p33013_20m/fe-deep-48l-512_unconstrained_seed0/run_summary.json",
+        "docs/0605_alldoc/0525_results_raw/0525_fe_fair_deep48_p33013_20m/nohup.out"
+      ],
+      "limits": [
+        "本轮只核对历史记录，未重跑训练。",
+        "仅seed0，无跨seed统计；历史吞吐依赖具体实现和运行配置。",
+        "静态proxy，不能外推为faithful动态mHC/oHC结论。",
+        "该run的save_checkpoints=false，不能作为posthoc checkpoint来源。"
+      ],
+      "measurements": [
+        {
+          "method": "baseline",
+          "seed": 0,
+          "num_layers": 48,
+          "d_model": 512,
+          "num_heads": 8,
+          "n_streams": 4,
+          "context_length": 512,
+          "batch_size": 20,
+          "actual_tokens": 20008960,
+          "optimizer_steps": 1954,
+          "tokens_per_second": 48358.86719120699,
+          "val_loss": 5.736599111557007,
+          "val_ppl": 310.0083124755679,
+          "eval_batches": 20,
+          "weight_decay": 0.1,
+          "mean_zero_energy_final": null,
+          "h_diagnostics": {}
+        },
+        {
+          "method": "identity-hc",
+          "seed": 0,
+          "num_layers": 48,
+          "d_model": 512,
+          "num_heads": 8,
+          "n_streams": 4,
+          "context_length": 512,
+          "batch_size": 20,
+          "actual_tokens": 20008960,
+          "optimizer_steps": 1954,
+          "tokens_per_second": 34350.56137468807,
+          "val_loss": 5.715724182128906,
+          "val_ppl": 303.6039883002125,
+          "eval_batches": 20,
+          "weight_decay": 0.1,
+          "mean_zero_energy_final": 0.050252851098775864,
+          "h_diagnostics": {
+            "fix_error_mean": 0.0,
+            "layer_mean": 23.5,
+            "orth_error_mean": 0.0,
+            "fix_error_max": 0.0,
+            "layer_max": 47.0,
+            "orth_error_max": 0.0
+          }
+        },
+        {
+          "method": "isohc",
+          "seed": 0,
+          "num_layers": 48,
+          "d_model": 512,
+          "num_heads": 8,
+          "n_streams": 4,
+          "context_length": 512,
+          "batch_size": 20,
+          "actual_tokens": 20008960,
+          "optimizer_steps": 1954,
+          "tokens_per_second": 22498.48396572474,
+          "val_loss": 5.720639991760254,
+          "val_ppl": 305.10012205150525,
+          "eval_batches": 20,
+          "weight_decay": 0.1,
+          "mean_zero_energy_final": 0.05456355959177017,
+          "h_diagnostics": {
+            "fix_error_mean": 2.788418978679393e-07,
+            "layer_mean": 23.5,
+            "orth_error_mean": 0.0005572972254412889,
+            "sv_max_1perp_mean": 1.0001160508642595,
+            "sv_mean_1perp_mean": 0.9999577210595211,
+            "sv_min_1perp_mean": 0.9998163487762213,
+            "fix_error_max": 3.475518042250769e-07,
+            "layer_max": 47.0,
+            "orth_error_max": 0.000860746658872813,
+            "sv_max_1perp_max": 1.0002855062484741,
+            "sv_mean_1perp_max": 1.0001192092895508,
+            "sv_min_1perp_max": 1.0000680685043335
+          }
+        },
+        {
+          "method": "mhc",
+          "seed": 0,
+          "num_layers": 48,
+          "d_model": 512,
+          "num_heads": 8,
+          "n_streams": 4,
+          "context_length": 512,
+          "batch_size": 20,
+          "actual_tokens": 20008960,
+          "optimizer_steps": 1954,
+          "tokens_per_second": 16846.250657067452,
+          "val_loss": 5.724872708320618,
+          "val_ppl": 306.3942613209028,
+          "eval_batches": 20,
+          "weight_decay": 0.1,
+          "mean_zero_energy_final": 0.013621517457067966,
+          "h_diagnostics": {
+            "col_sum_err_mean": 2.295990181681399e-07,
+            "entropy_mean": 0.20659170702862387,
+            "layer_mean": 23.5,
+            "neg_ratio_mean": 0.0,
+            "row_sum_err_mean": 0.004630791468419678,
+            "sv_max_1perp_mean": 0.923730074117581,
+            "sv_mean_1perp_mean": 0.9222056803603967,
+            "sv_min_1perp_mean": 0.9207538639505705,
+            "col_sum_err_max": 4.76837158203125e-07,
+            "entropy_max": 0.2099696198417705,
+            "layer_max": 47.0,
+            "neg_ratio_max": 0.0,
+            "row_sum_err_max": 0.00868604052811861,
+            "sv_max_1perp_max": 0.9305196404457092,
+            "sv_mean_1perp_max": 0.9269108176231384,
+            "sv_min_1perp_max": 0.9247356057167053
+          }
+        },
+        {
+          "method": "unconstrained",
+          "seed": 0,
+          "num_layers": 48,
+          "d_model": 512,
+          "num_heads": 8,
+          "n_streams": 4,
+          "context_length": 512,
+          "batch_size": 20,
+          "actual_tokens": 20008960,
+          "optimizer_steps": 1954,
+          "tokens_per_second": 26333.452202359105,
+          "val_loss": 5.675996613502503,
+          "val_ppl": 291.77898456615395,
+          "eval_batches": 20,
+          "weight_decay": 0.1,
+          "mean_zero_energy_final": 0.054674748331308365,
+          "h_diagnostics": {
+            "fix_error_mean": 0.10498981723988739,
+            "layer_mean": 23.5,
+            "orth_error_mean": 0.16936327586881816,
+            "fix_error_max": 0.7603784203529358,
+            "layer_max": 47.0,
+            "orth_error_max": 0.907239556312561
+          }
+        }
+      ],
+      "approx_parameter_count": 177040000,
+      "parameter_count_provenance": "historical runner log rounded to 0.01M",
+      "missing_assets": [
+        "本地可加载训练checkpoint"
+      ]
+    },
+    {
+      "id": "E-POSTHOC48",
+      "status": "local_raw_checked",
+      "claim": "另一个48L checkpoint的旧逐步投影乘积具有很大的补空间谱差异，但所测任务干预量均小于0.001 nats。",
+      "source_paths": [
+        "docs/0605_alldoc/0525_posthoc_eval16_report.md",
+        "docs/0605_alldoc/0525_results_raw/0525_core_mhc_isohc_48l_p51198/posthoc_eval16/mechanism_analysis_summary.json"
+      ],
+      "limits": [
+        "这是p51198来源，不能同p33013 fair-batch训练表合并。",
+        "本地只有posthoc输出；完整训练配置、吞吐、checkpoint未在所核对目录提供。",
+        "最大removal量跨所测位置选择，无显著性校正；probe只有batch1 x 16 batches。",
+        "transport谱不等于包含非线性分支的全网Jacobian。",
+        "旧composite_sv是projected-step product。各H保补空间e0^T H U=0即足以与full compression相等；旧mHC列和近精确意味着近似满足，不能仅据行误差断言旧值明显错误。对general exchange需schema2；历史checkpoint未重算。"
+      ],
+      "measurements": [
+        {
+          "method": "mhc",
+          "base_eval": {
+            "val_loss": 5.900726795196533,
+            "val_ppl": 365.30287177898987,
+            "val_batches": 16
+          },
+          "num_transports": 96,
+          "final_transport": {
+            "index": 95,
+            "branch": "mlp",
+            "layer": 47,
+            "composite_sv_min": 0.00041879736818373203,
+            "composite_sv_mean": 0.00043894999544136226,
+            "composite_sv_max": 0.00046257913345471025,
+            "product_sv_min": 0.00038731922292353733,
+            "product_sv_mean": 0.00043861391449504764,
+            "product_sv_max": 0.0004993476500822323
+          },
+          "gradient_slope": -0.021109450469043795,
+          "complement_removal_delta_min": -0.0002702474594116211,
+          "complement_removal_delta_max": 0.0002888143062591553,
+          "identity_delta": -0.0005237162113189697,
+          "random_iso_delta": -0.0008316636085510254
+        },
+        {
+          "method": "isohc",
+          "base_eval": {
+            "val_loss": 5.901273638010025,
+            "val_ppl": 365.50268965867645,
+            "val_batches": 16
+          },
+          "num_transports": 96,
+          "final_transport": {
+            "index": 95,
+            "branch": "mlp",
+            "layer": 47,
+            "composite_sv_min": 0.990570068359375,
+            "composite_sv_mean": 0.996349036693573,
+            "composite_sv_max": 1.002265214920044,
+            "product_sv_min": 0.9825621190351134,
+            "product_sv_mean": 0.9963426100917215,
+            "product_sv_max": 1.0115351319359807
+          },
+          "gradient_slope": -0.02137285993492292,
+          "complement_removal_delta_min": -0.0003667175769805908,
+          "complement_removal_delta_max": 0.0005164444446563721,
+          "identity_delta": 0.0007129907608032227,
+          "random_iso_delta": 0.0005595982074737549
+        }
+      ],
+      "reported_training": {
+        "num_layers": 48,
+        "total_tokens": 20000000,
+        "seed": 0
+      },
+      "probe": {
+        "batch_size": 1,
+        "eval_batches": 16,
+        "intervention_stride": 4
+      },
+      "missing_assets": [
+        "本地可加载p51198 final.pt",
+        "p51198完整训练run_summary.json"
+      ],
+      "historical_metric_schema": {
+        "schema_version_recorded": false,
+        "interpretation": "legacy schema 1",
+        "composite_sv_operator": "(U^T H_k U) ... (U^T H_1 U)",
+        "not_certified_as": "U^T (H_k ... H_1) U",
+        "current_schema_version": 2
+      }
+    },
+    {
+      "id": "E-CODE-PARAMETERIZATION",
+      "status": "local_code_checked",
+      "claim": "当前LM的transport静态，读写两端共享缩放初值均0.01，所有参数进入同一AdamW decay组。",
+      "source_paths": [
+        "lm/models.py",
+        "lm/mixing.py",
+        "lm/train.py"
+      ],
+      "limits": [
+        "源码核对不是旧远程运行版本身份验证。",
+        "精确均值/补空间块公式要求精确左右固定向量；有限Sinkhorn行误差不可忽略。",
+        "λ和向量可学习，初始双端缩放不等于最终loss效应或最终coupling。",
+        "全参数WD事实不等于任务梯度为零；本轮独立WD-only反事实见E-NEW-WD。"
+      ],
+      "measurements": {
+        "default_weight_decay": 0.1,
+        "lambda_read_init": 0.01,
+        "lambda_write_init": 0.01,
+        "branches_per_block": 2,
+        "readout_divisor": "n_streams",
+        "lambda_scope": "read/write respectively shared across all blocks and attn/mlp branches; separate final readout lambda",
+        "mhc_diag_bias": 4.0,
+        "mhc_sinkhorn_iters": 10
+      }
+    },
+    {
+      "id": "E-DETECTOR",
+      "status": "local_raw_checked",
+      "claim": "指定1024层residual-only transport中IsoHC近等距、mHC-lite补空间收缩、随机unconstrained爆炸。",
+      "source_paths": [
+        "docs/0605_alldoc/0605_full_report.md",
+        "docs/0605_alldoc/0510_results_raw/stage2_stability_detectors_core/stability_detectors.json"
+      ],
+      "limits": [
+        "toy residual-only诊断，不是端到端LM训练。",
+        "旧表energy=0实为mean-zero energy接近0；raw energy不为0。",
+        "不能从随机矩阵乘积概括所有unconstrained训练，也不能主张唯一稳定几何。"
+      ],
+      "config": {
+        "methods": [
+          "isohc",
+          "mhc-lite",
+          "unconstrained",
+          "gcn-diffusion"
+        ],
+        "streams": [
+          4,
+          8,
+          16
+        ],
+        "depths": [
+          32,
+          64,
+          128,
+          256,
+          512,
+          1024
+        ],
+        "dtypes": [
+          "fp32",
+          "bf16_fp32_mix"
+        ],
+        "feature_dim": 1024,
+        "trials": 16,
+        "ns_steps": 5,
+        "scale": 0.1,
+        "gcn_alpha": 0.2,
+        "seed": 123,
+        "device": "cuda",
+        "output_dir": "results/stage2_stability_detectors_core"
+      },
+      "measurements_fp32_n8_depth1024": {
+        "isohc": {
+          "energy_raw": 0.9999922066926956,
+          "energy_mean_zero": 0.9999910742044449,
+          "grad_ratio": 0.9999922066926956,
+          "stream_abs_cosine": 0.025019477121531963
+        },
+        "mhc-lite": {
+          "energy_raw": 0.3525146394968033,
+          "energy_mean_zero": 3.5165632183975504e-08,
+          "grad_ratio": 0.3536162804812193,
+          "stream_abs_cosine": 1.0
+        },
+        "unconstrained": {
+          "energy_raw": 55145688542720.0,
+          "energy_mean_zero": 56147291309056.0,
+          "grad_ratio": 55771493806080.0,
+          "stream_abs_cosine": 0.9877288490533829
+        },
+        "gcn-diffusion": {
+          "energy_raw": 0.3568151257932186,
+          "energy_mean_zero": 3.291526762261299e-08,
+          "grad_ratio": 0.3533387240022421,
+          "stream_abs_cosine": 0.9999999850988388
+        }
+      }
+    },
+    {
+      "id": "E-PRECISION",
+      "status": "local_raw_checked",
+      "claim": "该精度套件中bf16全路径均值漂移大，fp32 mixing路径显著改善固定方向误差。",
+      "source_paths": [
+        "docs/0605_alldoc/0605_full_report.md",
+        "docs/0605_alldoc/0510_results_raw/stage2_precision/precision_depth_suite.json"
+      ],
+      "limits": [
+        "是特定投影和传播实现的工程证据，不代表所有bf16正交实现均不可用。",
+        "0.695为n4/L512最大mean_error，均值是0.539。"
+      ],
+      "measurements_n4_depth512": {
+        "fp64": {
+          "energy": {
+            "mean": 0.9999998286366463,
+            "max": 1.0,
+            "min": 0.9999996423721313
+          },
+          "mean_error": {
+            "mean": 7.247646216512749e-07,
+            "max": 8.242599278673879e-07,
+            "min": 6.785782602491963e-07
+          }
+        },
+        "fp32": {
+          "energy": {
+            "mean": 0.9999998807907104,
+            "max": 1.000000238418579,
+            "min": 0.9999995231628418
+          },
+          "mean_error": {
+            "mean": 1.3807637571972009e-05,
+            "max": 1.678522130532656e-05,
+            "min": 1.2404921108100098e-05
+          }
+        },
+        "bf16_all": {
+          "energy": {
+            "mean": 0.9991765804588795,
+            "max": 1.0149747133255005,
+            "min": 0.9842694401741028
+          },
+          "mean_error": {
+            "mean": 0.5386034119874239,
+            "max": 0.6952553391456604,
+            "min": 0.4278247654438019
+          }
+        },
+        "bf16_fp32_mix": {
+          "energy": {
+            "mean": 0.9999998472630978,
+            "max": 1.000000238418579,
+            "min": 0.9999995827674866
+          },
+          "mean_error": {
+            "mean": 1.3367425424348767e-05,
+            "max": 1.5518759028054774e-05,
+            "min": 1.1750159501389135e-05
+          }
+        }
+      }
+    },
+    {
+      "id": "E-PROJECTION",
+      "status": "local_raw_checked",
+      "claim": "leftfix投影记录在n4/8/16约1e-6误差，但与旧总结n4 K5误差数值属于不同来源，不能混同。",
+      "source_paths": [
+        "docs/0605_alldoc/0605_full_report.md",
+        "docs/0605_alldoc/0510_results_raw/stage1_cuda_projection_leftfix/projection_sanity.json"
+      ],
+      "limits": [
+        "该JSON没有完整fallback配置。",
+        "不证明纯五步NS在任意条件下达SVD精度；实际LM关闭fallback后orth误差约5e-4。"
+      ],
+      "measurements": {
+        "4": {
+          "svd": {
+            "mean_orth_error": 5.082472966932983e-07,
+            "max_orth_error": 6.731023631800781e-07,
+            "mean_fix_error": 3.275398228197446e-07,
+            "max_fix_error": 5.364418029785156e-07,
+            "mean_energy_error": 9.592622518539429e-08,
+            "max_energy_error": 1.1920928955078125e-07
+          },
+          "5": {
+            "mean_orth_error": 5.070876341051189e-07,
+            "max_orth_error": 6.731023631800781e-07,
+            "mean_fix_error": 3.2775068348200875e-07,
+            "max_fix_error": 5.364418029785156e-07,
+            "mean_energy_error": 9.685754776000977e-08,
+            "max_energy_error": 1.1920928955078125e-07
+          }
+        },
+        "8": {
+          "svd": {
+            "mean_orth_error": 7.816098559487727e-07,
+            "max_orth_error": 9.674687362348777e-07,
+            "mean_fix_error": 4.364815993085358e-07,
+            "max_fix_error": 5.8703767535917e-07,
+            "mean_energy_error": 1.909211277961731e-08,
+            "max_energy_error": 1.1920928955078125e-07
+          },
+          "5": {
+            "mean_orth_error": 7.816098559487727e-07,
+            "max_orth_error": 9.674687362348777e-07,
+            "mean_fix_error": 4.364815993085358e-07,
+            "max_fix_error": 5.8703767535917e-07,
+            "mean_energy_error": 1.4435499906539917e-08,
+            "max_energy_error": 1.1920928955078125e-07
+          }
+        },
+        "16": {
+          "svd": {
+            "mean_orth_error": 1.1104298209829722e-06,
+            "max_orth_error": 1.2615016657946398e-06,
+            "mean_fix_error": 8.471416776956175e-07,
+            "max_fix_error": 9.666249525253079e-07,
+            "mean_energy_error": 4.237517714500427e-08,
+            "max_energy_error": 1.7881393432617188e-07
+          },
+          "5": {
+            "mean_orth_error": 1.1104298209829722e-06,
+            "max_orth_error": 1.2615016657946398e-06,
+            "mean_fix_error": 8.471416776956175e-07,
+            "max_fix_error": 9.666249525253079e-07,
+            "mean_energy_error": 4.6566128730773926e-08,
+            "max_energy_error": 1.7881393432617188e-07
+          }
+        }
+      }
+    },
+    {
+      "id": "E-GNN-SYNTH",
+      "status": "local_raw_checked",
+      "claim": "Synthetic SBM depth128中IsoNode保持energy与graph-native补空间variance，GCN/Residual收缩。",
+      "source_paths": [
+        "docs/0605_alldoc/gnn_experiment_report.md",
+        "results/gnn_stage1/synthetic_v2/oversmoothing.json"
+      ],
+      "limits": [
+        "该JSON本地存在但未Git跟踪，克隆仓库不保证可获得。",
+        "保方差不是任务收益证据。",
+        "node-space dense isometry与LM stream-space不是同一应用。"
+      ],
+      "source_portability": "local_untracked_raw",
+      "measurements_depth128": {
+        "gcn": {
+          "depth": 128,
+          "energy_ratio": 0.2003413289785385,
+          "centered_variance": 0.022598406299948692,
+          "v_centered_variance": 0.0012116647558286786,
+          "dirichlet_energy": 1.8340509200243105e-07,
+          "pairwise_cosine": 1.0
+        },
+        "residual": {
+          "depth": 128,
+          "energy_ratio": 0.2003408670425415,
+          "centered_variance": 0.022598350420594215,
+          "v_centered_variance": 0.0012116612633690238,
+          "dirichlet_energy": -5.933367788202304e-07,
+          "pairwise_cosine": 1.0
+        },
+        "isonode": {
+          "depth": 128,
+          "energy_ratio": 1.0,
+          "centered_variance": 1.000524640083313,
+          "v_centered_variance": 1.0,
+          "dirichlet_energy": 7940.2490234375,
+          "pairwise_cosine": 0.03247684985399246,
+          "invariant_error": 0.000942363403737545,
+          "invariant_error_norm": 1.005695594358258e-05
+        }
+      }
+    },
+    {
+      "id": "E-GNN-CORA",
+      "status": "local_raw_checked",
+      "claim": "Cora架构包修复和多stream/readout带来明显下游恢复，不能全部归因为IsoHC矩阵。",
+      "source_paths": [
+        "docs/0605_alldoc/gnn_experiment_report.md",
+        "results/gnn_stage1/cora_isores_fast/cora_isores.json",
+        "results/gnn_stage1/cora_ablation_sparse/cora_isores.json"
+      ],
+      "limits": [
+        "单seed配置，seed42等信息来自历史报告，raw未完整记录seed。",
+        "JSON本地存在但未Git跟踪。",
+        "concat、stream embedding、dropout与mixing的贡献需匹配控制。"
+      ],
+      "source_portability": "local_untracked_raw",
+      "measurements": {
+        "results/gnn_stage1/cora_isores_fast/cora_isores.json": {
+          "gcn_L2": {
+            "best_test_acc": 0.7751450676982592,
+            "n_params": 100352,
+            "config": {
+              "num_layers": 2,
+              "beta": 0.0,
+              "dropout": 0.5
+            }
+          },
+          "resgcn_L2_b0.5": {
+            "best_test_acc": 0.7504835589941973,
+            "n_params": 100352,
+            "config": {
+              "num_layers": 2,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "use_norm": true
+            }
+          },
+          "gcn_L16": {
+            "best_test_acc": 0.3065764023210832,
+            "n_params": 157696,
+            "config": {
+              "num_layers": 16,
+              "beta": 0.0,
+              "dropout": 0.5
+            }
+          },
+          "gcn_L32": {
+            "best_test_acc": 0.3118955512572534,
+            "n_params": 223232,
+            "config": {
+              "num_layers": 32,
+              "beta": 0.0,
+              "dropout": 0.5
+            }
+          },
+          "resgcn_L16_b0.5": {
+            "best_test_acc": 0.3002901353965184,
+            "n_params": 157696,
+            "config": {
+              "num_layers": 16,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "use_norm": true
+            }
+          },
+          "resgcn_L32_b0.5": {
+            "best_test_acc": 0.29545454545454547,
+            "n_params": 223232,
+            "config": {
+              "num_layers": 32,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "use_norm": true
+            }
+          },
+          "isostream_L16_b0.5_s4": {
+            "best_test_acc": 0.6910058027079303,
+            "n_params": 159552,
+            "config": {
+              "num_layers": 16,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "ns_steps": 5,
+              "n_streams": 4
+            }
+          },
+          "isostream_L32_b0.5_s4": {
+            "best_test_acc": 0.6392649903288201,
+            "n_params": 225344,
+            "config": {
+              "num_layers": 32,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "ns_steps": 5,
+              "n_streams": 4
+            }
+          }
+        },
+        "results/gnn_stage1/cora_ablation_sparse/cora_isores.json": {
+          "gcn_L2": {
+            "best_test_acc": 0.7751450676982592,
+            "n_params": 100352,
+            "config": {
+              "num_layers": 2,
+              "beta": 0.0,
+              "dropout": 0.5
+            }
+          },
+          "resgcn_L2_b0.5": {
+            "best_test_acc": 0.7504835589941973,
+            "n_params": 100352,
+            "config": {
+              "num_layers": 2,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "use_norm": true
+            }
+          },
+          "gcn_L16": {
+            "best_test_acc": 0.3065764023210832,
+            "n_params": 157696,
+            "config": {
+              "num_layers": 16,
+              "beta": 0.0,
+              "dropout": 0.5
+            }
+          },
+          "gcn_L32": {
+            "best_test_acc": 0.3118955512572534,
+            "n_params": 223232,
+            "config": {
+              "num_layers": 32,
+              "beta": 0.0,
+              "dropout": 0.5
+            }
+          },
+          "resgcn_L16_b0.5": {
+            "best_test_acc": 0.30319148936170215,
+            "n_params": 157696,
+            "config": {
+              "num_layers": 16,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "use_norm": true
+            }
+          },
+          "resgcn_L32_b0.5": {
+            "best_test_acc": 0.28239845261121854,
+            "n_params": 223232,
+            "config": {
+              "num_layers": 32,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "use_norm": true
+            }
+          },
+          "pairnorm_L16": {
+            "best_test_acc": 0.2558027079303675,
+            "n_params": 157696,
+            "config": {
+              "num_layers": 16,
+              "dropout": 0.5
+            }
+          },
+          "pairnorm_L32": {
+            "best_test_acc": 0.2504835589941973,
+            "n_params": 223232,
+            "config": {
+              "num_layers": 32,
+              "dropout": 0.5
+            }
+          },
+          "isostream_v1_L16_b0.5_s4": {
+            "best_test_acc": 0.20067698259187622,
+            "n_params": 157952,
+            "config": {
+              "num_layers": 16,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "ns_steps": 5,
+              "n_streams": 4
+            }
+          },
+          "isostream_v1_L32_b0.5_s4": {
+            "best_test_acc": 0.22195357833655707,
+            "n_params": 223744,
+            "config": {
+              "num_layers": 32,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "ns_steps": 5,
+              "n_streams": 4
+            }
+          },
+          "isostream_v2a_L16_b0.5_s4": {
+            "best_test_acc": 0.7427466150870407,
+            "n_params": 158208,
+            "config": {
+              "num_layers": 16,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "ns_steps": 5,
+              "n_streams": 4
+            }
+          },
+          "isostream_v2a_L32_b0.5_s4": {
+            "best_test_acc": 0.6779497098646035,
+            "n_params": 224000,
+            "config": {
+              "num_layers": 32,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "ns_steps": 5,
+              "n_streams": 4
+            }
+          },
+          "isostream_v2b_L16_b0.5_s4": {
+            "best_test_acc": 0.7127659574468085,
+            "n_params": 159296,
+            "config": {
+              "num_layers": 16,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "ns_steps": 5,
+              "n_streams": 4
+            }
+          },
+          "isostream_v2b_L32_b0.5_s4": {
+            "best_test_acc": 0.655705996131528,
+            "n_params": 225088,
+            "config": {
+              "num_layers": 32,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "ns_steps": 5,
+              "n_streams": 4
+            }
+          },
+          "isostream_v2c_L16_b0.5_s4": {
+            "best_test_acc": 0.7161508704061895,
+            "n_params": 159552,
+            "config": {
+              "num_layers": 16,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "ns_steps": 5,
+              "n_streams": 4
+            }
+          },
+          "isostream_v2c_L32_b0.5_s4": {
+            "best_test_acc": 0.7509671179883946,
+            "n_params": 225344,
+            "config": {
+              "num_layers": 32,
+              "beta": 0.5,
+              "dropout": 0.5,
+              "ns_steps": 5,
+              "n_streams": 4
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "E-GNN-H-SINGLE",
+      "status": "local_raw_checked",
+      "claim": "单seed orthogonal L16最好，但identity与none的L32差达14.41点，提示配对和随机性问题。",
+      "source_paths": [
+        "docs/0605_alldoc/gnn_experiment_report.md",
+        "results/gnn_stage1/cora_h_ablation/cora_isores.json"
+      ],
+      "limits": [
+        "单seed，不证明打破均值约束总是更好。",
+        "JSON本地存在但未Git跟踪。",
+        "多seed历史摘要排序不同。"
+      ],
+      "source_portability": "local_untracked_raw",
+      "measurements": {
+        "isostream_v2c_identity_L16_b0.5_s4": 0.7011605415860735,
+        "isostream_v2c_identity_L32_b0.5_s4": 0.7040618955512572,
+        "isostream_v2c_none_L16_b0.5_s4": 0.7137330754352031,
+        "isostream_v2c_none_L32_b0.5_s4": 0.5599613152804642,
+        "isostream_v2c_unconstrained_L16_b0.5_s4": 0.6992263056092843,
+        "isostream_v2c_unconstrained_L32_b0.5_s4": 0.6726305609284333,
+        "isostream_v2c_orthogonal_L16_b0.5_s4": 0.7683752417794971,
+        "isostream_v2c_orthogonal_L32_b0.5_s4": 0.691972920696325,
+        "isostream_v2c_iso_L16_b0.5_s4": 0.7248549323017408,
+        "isostream_v2c_iso_L32_b0.5_s4": 0.6121856866537717
+      }
+    },
+    {
+      "id": "E-GNN-MULTI-REPORT",
+      "status": "historical_report_only",
+      "claim": "历史5seed摘要显示IsoStream v2明显优于这些deep GCN/ResGCN配置。",
+      "source_paths": [
+        "docs/0605_alldoc/gnn_experiment_report.md",
+        "results/gnn_stage1/cora_multiseed/cora_multiseed.md"
+      ],
+      "limits": [
+        "只有Markdown汇总，本轮未发现逐seedJSON，未重算统计。",
+        "std是报告中的std，不是standard error。",
+        "架构包效果，不是mixing独立效果。"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "summary_markdown": "# Cora Multi-Seed Results\n\n**Seeds:** [0, 1, 2, 3, 4]\n\n| config | mean | std | min | max | n |\n|--------|-----:|----:|----:|----:|--:|\n| gcn_L16 | 0.3110 | 0.0023 | 0.3085 | 0.3148 | 5 |\n| gcn_L2 | 0.7764 | 0.0190 | 0.7611 | 0.8095 | 5 |\n| gcn_L32 | 0.3116 | 0.0029 | 0.3095 | 0.3167 | 5 |\n| isostream_L16_b0.5_s4 | 0.7311 | 0.0188 | 0.7152 | 0.7582 | 5 |\n| isostream_L32_b0.5_s4 | 0.6664 | 0.0342 | 0.6156 | 0.7118 | 5 |\n| resgcn_L16_b0.5 | 0.2877 | 0.0402 | 0.2162 | 0.3095 | 5 |\n| resgcn_L2_b0.5 | 0.7580 | 0.0116 | 0.7427 | 0.7708 | 5 |\n| resgcn_L32_b0.5 | 0.2858 | 0.0281 | 0.2384 | 0.3066 | 5 |\n",
+      "missing_assets": [
+        "Cora基础多seed逐seed原始JSON及对应配置"
+      ]
+    },
+    {
+      "id": "E-GNN-H-MULTI-REPORT",
+      "status": "historical_report_only",
+      "claim": "H型5seed汇总中L16 identity/none/Iso接近且orthogonal更低；L32 Iso优于identity但与none差更小。",
+      "source_paths": [
+        "docs/0605_alldoc/comprehensive_summary.md",
+        "results/gnn_stage1/cora_h_multiseed/cora_multiseed.md"
+      ],
+      "limits": [
+        "只有Markdown汇总，没有逐seedJSON；本轮未重算统计或显著性。",
+        "identity/none同逻辑却有差异，需固定初始化/RNG的配对控制。",
+        "不支持打破均值约束都更好的附件概括。"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "summary_markdown": "# Cora Multi-Seed Results\n\n**Seeds:** [0, 1, 2, 3, 4]\n\n| config | mean | std | min | max | n |\n|--------|-----:|----:|----:|----:|--:|\n| isostream_v2c_identity_L16_b0.5_s4 | 0.7405 | 0.0170 | 0.7205 | 0.7631 | 5 |\n| isostream_v2c_identity_L32_b0.5_s4 | 0.6644 | 0.0089 | 0.6543 | 0.6784 | 5 |\n| isostream_v2c_iso_L16_b0.5_s4 | 0.7395 | 0.0217 | 0.7108 | 0.7626 | 5 |\n| isostream_v2c_iso_L32_b0.5_s4 | 0.7068 | 0.0307 | 0.6538 | 0.7278 | 5 |\n| isostream_v2c_none_L16_b0.5_s4 | 0.7418 | 0.0105 | 0.7331 | 0.7582 | 5 |\n| isostream_v2c_none_L32_b0.5_s4 | 0.6904 | 0.0193 | 0.6601 | 0.7118 | 5 |\n| isostream_v2c_orthogonal_L16_b0.5_s4 | 0.7214 | 0.0166 | 0.7036 | 0.7432 | 5 |\n| isostream_v2c_orthogonal_L32_b0.5_s4 | 0.6896 | 0.0580 | 0.5977 | 0.7394 | 5 |\n| isostream_v2c_unconstrained_L16_b0.5_s4 | 0.6859 | 0.0286 | 0.6518 | 0.7162 | 5 |\n| isostream_v2c_unconstrained_L32_b0.5_s4 | 0.6252 | 0.0460 | 0.5880 | 0.6920 | 5 |\n",
+      "missing_assets": [
+        "Cora H型多seed逐seed原始JSON及匹配初始化记录"
+      ]
+    },
+    {
+      "id": "E-CLAUDE-GAUGE",
+      "status": "attachment_reported_unverified",
+      "claim": "附件报告静态IsoHC与identity-HC经读写坐标变换后logits匹配。",
+      "source_paths": [
+        "docs/research/claude_handoff.md"
+      ],
+      "limits": [
+        "Claude原验证脚本/运行记录仍缺失；本轮另外独立验证了参数变换及其边界，见E-NEW-GAUGE，不能视为恢复其相同原运行。",
+        "不能直接推广为动态IsoHC无作用。"
+      ],
+      "external_source": "user_attachment: 已粘贴的文本.txt; repository handoff contains excerpts, not raw results",
+      "reported_measurements": {
+        "reported_float64_logit_error": 3e-16
+      },
+      "missing_assets": [
+        "docs/0924_salvage/",
+        "附件所述commit 5c047df中的原脚本及结果"
+      ],
+      "related_independent_verification": "E-NEW-GAUGE"
+    },
+    {
+      "id": "E-CLAUDE-WD",
+      "status": "attachment_reported_unverified",
+      "claim": "附件报告WD-only重放接近历史24L/48L mHC谱。",
+      "source_paths": [
+        "docs/research/claude_handoff.md"
+      ],
+      "limits": [
+        "Claude原WD脚本/记录仍缺失；本轮独立反事实已执行，见E-NEW-WD，其预测与附件值分别登记。",
+        "数值接近不能证明loss对transport梯度为零。"
+      ],
+      "external_source": "user_attachment: 已粘贴的文本.txt; repository handoff contains excerpts, not raw results",
+      "reported_measurements": {
+        "predicted_step_sv_48l": 0.92174,
+        "reported_measured_step_sv_48l": 0.92221,
+        "predicted_step_sv_24l": 0.91542,
+        "reported_measured_step_sv_24l": 0.91563,
+        "predicted_composite_48l": 0.0004,
+        "reported_measured_composite_48l": 0.000439
+      },
+      "missing_assets": [
+        "docs/0924_salvage/",
+        "附件所述commit 5c047df中的原脚本及结果"
+      ],
+      "related_independent_verification": "E-NEW-WD"
+    },
+    {
+      "id": "E-CLAUDE-CPU",
+      "status": "attachment_reported_unverified",
+      "claim": "附件报告约0.8M/16L char-level双seed probe中等距臂无可检测收益，非等距gain有收益。",
+      "source_paths": [
+        "docs/research/claude_handoff.md"
+      ],
+      "limits": [
+        "缺完整配置、数据定义、逐seed raw及depth-scaled-init记录。",
+        "强removal效应不等于相对收益。",
+        "不能外推目标LM规模或把主观通过概率当实测统计。"
+      ],
+      "external_source": "user_attachment: 已粘贴的文本.txt; repository handoff contains excerpts, not raw results",
+      "reported_measurements": {
+        "approx_params": 800000,
+        "layers": 16,
+        "seeds": 2,
+        "reported_seed_spread_nats": 0.03,
+        "reported_unconstrained_improvement_nats": 0.05,
+        "reported_free_gain_improvement_nats": 0.03,
+        "reported_strong_coupling_removal_delta_range_nats": [
+          0.2,
+          1.2
+        ]
+      },
+      "missing_assets": [
+        "docs/0924_salvage/",
+        "附件所述commit 5c047df中的原脚本及结果"
+      ]
+    },
+    {
+      "id": "E-NEW-GAUGE",
+      "status": "new_local_verification",
+      "claim": "两组独立CPU数值示例各11/11检查通过；实际TwoBranch模型经完整静态IsoHC gauge变换后logits一致，并验证模型类/边界/奇异性反例。",
+      "source_paths": [
+        "experiments/verify_gauge_contracts.py",
+        "results/theory_audit_20260925/README.md",
+        "results/theory_audit_20260925/gauge_contracts.json",
+        "results/theory_audit_20260925/gauge_contracts_seed7.json"
+      ],
+      "limits": [
+        "数值示例seed不是独立训练seed；没有数据、checkpoint或训练收益证据。",
+        "新实现的独立验证，不是Claude缺失原脚本和相同运行的复现。",
+        "完整输入/读/写/exit变换与参数类封闭条件是契约的一部分；只换H不保证函数一致。",
+        "默认NS投影近似满足约束；精确范数保持仅属于精确等距算子。",
+        "动态、受限或共享参数模型不能不加条件套用静态gauge。"
+      ],
+      "execution": {
+        "commands": [
+          "python3 experiments/verify_gauge_contracts.py",
+          "python3 experiments/verify_gauge_contracts.py --seed 7 --output results/theory_audit_20260925/gauge_contracts_seed7.json"
+        ],
+        "device": "cpu",
+        "precision": "torch.float64",
+        "python": "3.9.6",
+        "torch": "2.8.0",
+        "training_performed": false
+      },
+      "measurements": [
+        {
+          "seed": 20260925,
+          "passed": true,
+          "check_count": 11,
+          "checks": [
+            {
+              "name": "invertible_static_transport_free_vectors",
+              "max_error": 2.498001805406602e-16,
+              "tolerance": 1e-10,
+              "passed": true,
+              "scope": "Nonlinear algebraic recurrence; unrestricted read/write/exit vectors.",
+              "max_cumulative_condition": 6.542742293207443
+            },
+            {
+              "name": "static_gauge_preserves_depth_kernel",
+              "max_error": 2.7755575615628914e-16,
+              "tolerance": 1e-10,
+              "passed": true
+            },
+            {
+              "name": "arbitrary_gauge_transforms_input_and_exit_boundaries",
+              "max_error": 1.1102230246251565e-15,
+              "tolerance": 1e-10,
+              "passed": true
+            },
+            {
+              "name": "arbitrary_gauge_preserves_depth_kernel",
+              "max_error": 6.661338147750939e-16,
+              "tolerance": 1e-10,
+              "passed": true
+            },
+            {
+              "name": "orthogonal_exit_boundary_transform",
+              "max_error": 0.0,
+              "tolerance": 1e-10,
+              "passed": true,
+              "unchanged_exit_gap": 1.0,
+              "transformed_exit_sum": 0.0,
+              "required_sum_in_repo_class": 2,
+              "scope": "Exit transform leaves the fixed-sum parameter class."
+            },
+            {
+              "name": "singular_transport_rank_obstruction",
+              "passed": true,
+              "transport_rank": 1,
+              "identity_rank": 2,
+              "max_error": 9.560342516888455e-19,
+              "scope": "State-coordinate obstruction; not a claim that every singular model defines a new function class."
+            },
+            {
+              "name": "mean_preserving_kernel_lambda_squared",
+              "max_error": 2.0694557179012918e-12,
+              "tolerance": 1e-10,
+              "passed": true,
+              "lambda_values": [
+                0.01,
+                0.1,
+                0.5
+              ],
+              "intermediate_scale_max_error": 2.0428658764615193e-12,
+              "scope": "Fixed zero-mean vectors and exact mean-preserving H; says nothing by itself about loss changes or initial stream offsets."
+            },
+            {
+              "name": "mean_preserving_identity_has_rank_two_cross_cut_kernel",
+              "max_error": 0.0,
+              "tolerance": 1e-10,
+              "passed": true,
+              "rank": 2,
+              "scope": "Two past writes and two future reads, H=I; fixed-sum read/write vectors."
+            },
+            {
+              "name": "projection_between_steps_loses_exchange_return_path",
+              "max_error": 5.551115123125783e-16,
+              "tolerance": 1e-10,
+              "passed": true,
+              "product_of_projected_steps": 3.0814879110195774e-33,
+              "projection_after_full_product": -0.9999999999999994,
+              "discrepancy": 0.9999999999999994
+            },
+            {
+              "name": "repo_two_branch_logits_default_projection",
+              "max_error": 1.8480580676882852e-09,
+              "tolerance": 2e-06,
+              "passed": true,
+              "ungauged_identity_max_error": 0.0030878254192759705,
+              "max_transport_orthogonality_error": 0.00043864844207214314,
+              "max_transport_mean_error": 6.828569992527346e-08,
+              "max_read_write_fixed_sum_error": 2.0502613562456418e-07,
+              "max_read_write_squared_norm_change": 0.0005455977375490306,
+              "scope": "Actual TwoBranchHCTransformer; float64 forward, nonzero read/write coupling; no training."
+            },
+            {
+              "name": "repo_two_branch_logits_exact_projection",
+              "max_error": 5.551115123125783e-17,
+              "tolerance": 1e-10,
+              "passed": true,
+              "ungauged_identity_max_error": 0.010764494124333154,
+              "max_transport_orthogonality_error": 2.3447792438552953e-15,
+              "max_transport_mean_error": 2.220446049250313e-16,
+              "max_read_write_fixed_sum_error": 8.881784197001252e-16,
+              "max_read_write_squared_norm_change": 6.217248937900877e-15,
+              "scope": "Actual TwoBranchHCTransformer; float64 forward, nonzero read/write coupling; no training."
+            }
+          ]
+        },
+        {
+          "seed": 7,
+          "passed": true,
+          "check_count": 11,
+          "checks": [
+            {
+              "name": "invertible_static_transport_free_vectors",
+              "max_error": 1.3877787807814457e-16,
+              "tolerance": 1e-10,
+              "passed": true,
+              "scope": "Nonlinear algebraic recurrence; unrestricted read/write/exit vectors.",
+              "max_cumulative_condition": 10.060264278442162
+            },
+            {
+              "name": "static_gauge_preserves_depth_kernel",
+              "max_error": 4.440892098500626e-16,
+              "tolerance": 1e-10,
+              "passed": true
+            },
+            {
+              "name": "arbitrary_gauge_transforms_input_and_exit_boundaries",
+              "max_error": 1.6653345369377348e-16,
+              "tolerance": 1e-10,
+              "passed": true
+            },
+            {
+              "name": "arbitrary_gauge_preserves_depth_kernel",
+              "max_error": 6.661338147750939e-16,
+              "tolerance": 1e-10,
+              "passed": true
+            },
+            {
+              "name": "orthogonal_exit_boundary_transform",
+              "max_error": 0.0,
+              "tolerance": 1e-10,
+              "passed": true,
+              "unchanged_exit_gap": 1.0,
+              "transformed_exit_sum": 0.0,
+              "required_sum_in_repo_class": 2,
+              "scope": "Exit transform leaves the fixed-sum parameter class."
+            },
+            {
+              "name": "singular_transport_rank_obstruction",
+              "passed": true,
+              "transport_rank": 1,
+              "identity_rank": 2,
+              "max_error": 9.560342516888455e-19,
+              "scope": "State-coordinate obstruction; not a claim that every singular model defines a new function class."
+            },
+            {
+              "name": "mean_preserving_kernel_lambda_squared",
+              "max_error": 4.779288076406374e-12,
+              "tolerance": 1e-10,
+              "passed": true,
+              "lambda_values": [
+                0.01,
+                0.1,
+                0.5
+              ],
+              "intermediate_scale_max_error": 4.729557023797071e-12,
+              "scope": "Fixed zero-mean vectors and exact mean-preserving H; says nothing by itself about loss changes or initial stream offsets."
+            },
+            {
+              "name": "mean_preserving_identity_has_rank_two_cross_cut_kernel",
+              "max_error": 0.0,
+              "tolerance": 1e-10,
+              "passed": true,
+              "rank": 2,
+              "scope": "Two past writes and two future reads, H=I; fixed-sum read/write vectors."
+            },
+            {
+              "name": "projection_between_steps_loses_exchange_return_path",
+              "max_error": 5.551115123125783e-16,
+              "tolerance": 1e-10,
+              "passed": true,
+              "product_of_projected_steps": 3.0814879110195774e-33,
+              "projection_after_full_product": -0.9999999999999994,
+              "discrepancy": 0.9999999999999994
+            },
+            {
+              "name": "repo_two_branch_logits_default_projection",
+              "max_error": 5.498163049844074e-09,
+              "tolerance": 2e-06,
+              "passed": true,
+              "ungauged_identity_max_error": 0.005013735394043407,
+              "max_transport_orthogonality_error": 3.4068490033851475e-05,
+              "max_transport_mean_error": 6.828569990357414e-08,
+              "max_read_write_fixed_sum_error": 2.787562767281315e-07,
+              "max_read_write_squared_norm_change": 2.4291786953511973e-05,
+              "scope": "Actual TwoBranchHCTransformer; float64 forward, nonzero read/write coupling; no training."
+            },
+            {
+              "name": "repo_two_branch_logits_exact_projection",
+              "max_error": 5.551115123125783e-17,
+              "tolerance": 1e-10,
+              "passed": true,
+              "ungauged_identity_max_error": 0.004651691019154955,
+              "max_transport_orthogonality_error": 2.033813398397904e-15,
+              "max_transport_mean_error": 3.1401849173675503e-16,
+              "max_read_write_fixed_sum_error": 8.881784197001252e-16,
+              "max_read_write_squared_norm_change": 1.7763568394002505e-15,
+              "scope": "Actual TwoBranchHCTransformer; float64 forward, nonzero read/write coupling; no training."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "E-NEW-WD",
+      "status": "new_local_verification",
+      "claim": "从本地历史配置和实际步数独立重放对称初始化的WD-only反事实，可解释测得mHC均值单步收缩的大部分，但不证明任务梯度为零。",
+      "source_paths": [
+        "experiments/verify_gauge_contracts.py",
+        "results/theory_audit_20260925/README.md",
+        "results/theory_audit_20260925/gauge_contracts.json",
+        "results/theory_audit_20260925/gauge_contracts_seed7.json",
+        "docs/0605_alldoc/0525_results_raw/0525_fe_fair_deep48_p33013_20m/fe-deep-48l-512_mhc_seed0/run_summary.json",
+        "docs/0605_alldoc/0524_results_raw/0524_deep_stress_512/deep-stress-512_mhc_seed0/run_summary.json"
+      ],
+      "limits": [
+        "不是Claude原脚本或相同运行的复现。",
+        "使用当前cosine_lr_schedule和历史config/steps，未认证旧远程代码身份。",
+        "对称4I logits，省略初始化噪声和任务梯度；不是梯度或优化器轨迹的分解。",
+        "48L composite值只作为96次对称transport的预测，未与不同p51198 run的旧posthoc数值配对。"
+      ],
+      "execution": {
+        "training_performed": false,
+        "replay": "q=product_t(1-lr_t*weight_decay); sigma=(exp(4*q)-1)/(exp(4*q)+3)",
+        "source_receipt": "results/theory_audit_20260925/gauge_contracts.json"
+      },
+      "measurements": [
+        {
+          "source": "docs/0605_alldoc/0525_results_raw/0525_fe_fair_deep48_p33013_20m/fe-deep-48l-512_mhc_seed0/run_summary.json",
+          "layers": 48,
+          "optimizer_steps": 1954,
+          "init_diag_bias": 4.0,
+          "logit_shrink_factor": 0.9685285196872673,
+          "predicted_single_step_sigma": 0.9217833874442609,
+          "measured_single_step_sigma": 0.9222056803603967,
+          "absolute_difference": 0.00042229291613582465,
+          "relative_difference": 0.0004579161949759333,
+          "predicted_composite_sigma": 0.00040213528766509636,
+          "measured_row_sum_error_mean": 0.004630791468419678,
+          "scope": "Symmetric 4I initialization; omits random init noise and task gradients. Close agreement does not prove gradients vanish. Composite is prediction only, not matched to another run."
+        },
+        {
+          "source": "docs/0605_alldoc/0524_results_raw/0524_deep_stress_512/deep-stress-512_mhc_seed0/run_summary.json",
+          "layers": 24,
+          "optimizer_steps": 3256,
+          "init_diag_bias": 4.0,
+          "logit_shrink_factor": 0.9481281735178846,
+          "predicted_single_step_sigma": 0.915554346579274,
+          "measured_single_step_sigma": 0.9156286492943764,
+          "absolute_difference": 7.430271510233677e-05,
+          "relative_difference": 8.114939955144228e-05,
+          "predicted_composite_sigma": 0.014482321400258735,
+          "measured_row_sum_error_mean": 0.006142647930876895,
+          "scope": "Symmetric 4I initialization; omits random init noise and task gradients. Close agreement does not prove gradients vanish. Composite is prediction only, not matched to another run."
+        }
+      ]
+    },
+    {
+      "id": "E-NEW-TRANSPORT-SCHEMA",
+      "status": "new_local_verification",
+      "claim": "collect_transport_report schema2分别计算完整operator压缩与逐步投影乘积，三个契约测试通过，防止丢失mean-complement往返路径。",
+      "source_paths": [
+        "lm/transport_analysis.py",
+        "tests/test_transport_composition.py",
+        "experiments/analyze_lm_mechanisms.py",
+        "results/theory_audit_20260925/README.md",
+        "results/theory_audit_20260925/gauge_contracts.json"
+      ],
+      "limits": [
+        "验证诊断语义和矩阵乘法顺序，不是新训练结果。",
+        "历史JSON保持legacy/schema1含义；缺失checkpoint尚未重新分析。",
+        "composite transport不是包含非线性分支的全网Jacobian。"
+      ],
+      "schema": {
+        "version": 2,
+        "composite_sv_operator": "U^T (H_k ... H_1) U",
+        "projected_step_product_sv_operator": "(U^T H_k U) ... (U^T H_1 U)"
+      },
+      "execution": {
+        "command": "python3 -m unittest tests.test_transport_composition -v",
+        "exit_code": 0,
+        "tests_run": 3,
+        "tests_passed": 3,
+        "training_performed": false,
+        "checks": [
+          "mean_complement_round_trip_survives_full_composition",
+          "mean_preserving_mixers_match_historical_projected_composition",
+          "noncommuting_prefixes_use_forward_transport_order"
+        ],
+        "output_summary": "Ran 3 tests in 0.026s; OK"
+      },
+      "counterexample": {
+        "product_of_projected_steps": 3.0814879110195774e-33,
+        "projection_after_full_product": -0.9999999999999994
+      }
+    },
+    {
+      "id": "E-RDM-CONTRACTS",
+      "status": "new_local_verification",
+      "claim": "RDM候选的槽位提交/保护/到期原语通过离线合同验证；尚无完整模型、可学习期限或任务优势。",
+      "source_paths": [
+        "experiments/verify_depth_memory_contracts.py",
+        "results/depth_memory_contracts_20260925/README.md",
+        "results/depth_memory_contracts_20260925/contracts.json"
+      ],
+      "limits": [
+        "CPU数值与功能原语；不是完整RDM实现，也没有LM训练。",
+        "时间trace使用外部给定lease，不能作为可学习预测器成功证据。",
+        "状态有界与冻结控制的carry不扩张，不保证完整非线性Jacobian或训练稳定。",
+        "slot version只防元数据串代，不证明key语义与未来需求预测正确。",
+        "2026-09-26撤销RDM主线资格；本条仅保留历史原语事实，不是继续开发的决策。"
+      ],
+      "command": "python3 experiments/verify_depth_memory_contracts.py",
+      "measurements": {
+        "seed": 20260925,
+        "checks_passed": 11,
+        "checks_total": 11,
+        "training_performed": false,
+        "device": "cpu",
+        "precision": "torch.float64"
+      }
+    },
+    {
+      "id": "E-ADJOINT-INTEGRATION",
+      "status": "local_integration_training",
+      "claim": "完整伴随读写Transformer与训练入口可运行；signed入口保持初始baseline函数且路由梯度非零；四臂合成NTP训练和两种CPU成本测量已完成，当前无有意义的质量收益。",
+      "source_paths": [
+        "lm/adjoint.py",
+        "experiments/lm_5090_next_runs.py",
+        "tests/test_adjoint_contracts.py",
+        "experiments/adjoint_hc_probe.py",
+        "results/adjoint_hc_20260926/probe.json",
+        "results/adjoint_hc_20260926/README.md"
+      ],
+      "limits": [
+        "一阶Markov合成token源，不是自然语言、长记忆任务或独立训练seed确认。",
+        "冻结辅助写入与主方法同样有效；不能把约0.0002的单次NLL差称为质量优势或记忆必要性。",
+        "固定路由谱性质不保证动态全网稳定；入口一阶梯度不改变初始深度核角度导数为零。",
+        "CPU未融合实现的两个形状不能外推GPU成本；aot_eager全图一致性不是融合内核或编译提速。",
+        "强单流、同carrier自由读写及faithful动态HC/AttnRes比较尚未完成；新颖性与SOTA不成立。"
+      ],
+      "execution": {
+        "commands": [
+          "python3 -m unittest discover -s tests -p 'test_adjoint_contracts.py' -v",
+          "python3 experiments/adjoint_hc_probe.py --compile-check"
+        ],
+        "training_performed": true,
+        "integration_training_only": true,
+        "natural_language_training_performed": false,
+        "gpu_used": false,
+        "data_downloaded": false,
+        "contract_tests_passed": 16,
+        "legacy_runner_tests_passed": 14,
+        "integration_checks": {
+          "same_seed_backbone_equality": true,
+          "exact_initial_logits": true,
+          "signed_carrier_opens_route_gradient": true,
+          "zero_carrier_has_dead_initial_route_gradient": true,
+          "all_arms_learn_synthetic_source": true,
+          "all_candidate_routers_move": true,
+          "dynamic_auxiliary_writes_activate": true,
+          "static_auxiliary_writes_activate": true,
+          "frozen_auxiliary_control_stays_frozen": true
+        },
+        "environment": {
+          "python": "3.9.6 (default, Aug 25 2026, 21:26:21) \n[Clang 21.0.0 (clang-2100.3.34.2)]",
+          "torch": "2.8.0",
+          "platform": "macOS-27.0-arm64-arm-64bit",
+          "processor": "arm",
+          "device": "cpu",
+          "dtype": "float32",
+          "num_threads": 1,
+          "num_interop_threads": 1,
+          "deterministic_algorithms": true
+        }
+      },
+      "measurements": {
+        "training_tokens_per_arm": 10240,
+        "training_tokens_total": 40960,
+        "optimizer_steps_per_arm": 80,
+        "model_seed": 419,
+        "final_validation_nll": {
+          "baseline": 1.246839,
+          "dynamic_signed": 1.246644,
+          "static_signed": 1.246806,
+          "dynamic_signed_frozen_aux": 1.24664
+        },
+        "initial_logits_max_abs_difference": 0.0,
+        "initial_dynamic_signed_router_grad_l2": 0.0193372597,
+        "initial_zero_carrier_router_grad_l2": 0.0,
+        "cpu_candidate_over_baseline_median_ratio": {
+          "small": 1.4168550488103395,
+          "wide": 1.1567435348240278
+        },
+        "compile_check": {
+          "attempted": true,
+          "backend": "aot_eager",
+          "fullgraph": true,
+          "succeeded": true,
+          "logits_max_abs_difference": 0.0,
+          "gradient_max_abs_difference": 0.0,
+          "elapsed_seconds": 1.2927460000000006,
+          "scope": "Single fixed shape fullgraph forward+backward; not fusion or compiled throughput."
+        }
+      },
+      "source_sha256": {
+        "experiments/adjoint_hc_probe.py": "bd10a6888b4c3ebf3705fdbd7b9bc98cd10f5f3ee08f63dc281572a79f43bf08",
+        "lm/adjoint.py": "b8baa5f1820256721e2c4029d87c59fdb621991e08f612fa42f461f707ba08c0",
+        "lm/models.py": "e4bad5a1ca3580e6b4bb0aa3164733009567f20b79a38c551b05efc75c6d0f97"
+      }
+    }
+  ],
+  "research_decision_revision": "R4: adjoint-hc is implemented with exact-baseline initialization, live routing gradients and completed synthetic NTP integration training. No useful quality gain in this probe; CPU overhead measured at two shapes. RDM remains retired.",
+  "updated_date": "2026-09-26"
+}

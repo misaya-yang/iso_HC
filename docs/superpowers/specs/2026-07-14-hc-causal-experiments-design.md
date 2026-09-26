@@ -1,3 +1,10 @@
+<!-- doc-status: historical -->
+> **Historical design from 2026-07-14:** retained for provenance; current method
+> and engineering contracts are owned by
+> [the current architecture](../../research/architecture.md), with priorities
+> in the [current research plan](../../research/roadmap.md).
+
+<!-- doc-history-body-begins -->
 # HC Causal Experiments Design
 
 **Status:** Approved design direction; implementation awaits review of this written specification.

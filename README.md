@@ -1,59 +1,19 @@
-# IsoHC
+# LLM residual algorithm research
 
-Canonical code for the IsoHC mechanism experiments.
+当前算法候选：**伴随读写残差 `adjoint-hc`**。两条流用同一个单位向量读取和写回，保留identity carry；无需额外混合矩阵、teacher或离散调度。已实现完整Transformer和训练入口，正在验证质量与成本，尚非SOTA结论。
 
-## Current Main Claim
-
-The current `static-birkhoff-hc` proxy preserves the residual-stream mean but
-can contract the mean-zero stream subspace at depth. `IsoHC` keeps the same
-invariant while using fixed-vector isometric transport on the complement. This
-is a hypothesis under causal testing, not a claim about faithful dynamic mHC.
-
-## Supported Experiment Entrypoints
-
-- `experiments/hc_causal_controls.py`
-  - Current P0 geometry, matched-control, depth, and intervention suites.
-- `experiments/run_0525_mechanism_gpu_pipeline.sh`
-  - Historical 5090 FE 48L reproduction run.
-  - Default methods: `identity-hc mhc isohc`.
-  - Data/cache/results must live under `/root/autodl-tmp/isoHC`.
-- `experiments/lm_5090_next_runs.py`
-  - Low-level runner used by the shell pipeline.
-- `experiments/analyze_lm_mechanisms.py`
-  - Checkpoint posthoc analysis: composite complement gain, gradient profile,
-    complement removal, IsoHC->identity, IsoHC->random-Iso.
-- `experiments/prepare_lm_data.py`
-  - Builds token caches when network access is available.
-
-Do not use deleted legacy FE or TinyShakespeare/PPL smoke scripts for paper
-evidence. Historical raw results are kept under `docs/0605_alldoc`.
-
-`mhc` remains a legacy command/checkpoint alias. New evidence must use the
-label `static-birkhoff-hc`.
-
-## P0 Geometry Command
+- [算法与可运行实现](docs/research/architecture.md) · [源码](lm/adjoint.py)
+- [研究目标](docs/research/README.md) · [理论证明](docs/research/theory.md)
+- [训练/工程回执](results/adjoint_hc_20260926/README.md) · [证据台账](docs/research/evidence.md)
+- [下一实验](docs/research/roadmap.md) · [先行工作](docs/research/literature.md)
+- [文档权威](AGENTS.md) · [登记](docs/research/document_registry.json)
 
 ```bash
-PYTHONDONTWRITEBYTECODE=1 python3 experiments/hc_causal_controls.py \
-  --suite geometry \
-  --output_dir outputs/hc_geometry
+python3 -m unittest discover -s tests -p 'test_adjoint_contracts.py' -v
+python3 experiments/adjoint_hc_probe.py
+python3 scripts/check_research_docs.py
 ```
 
-## Server Command
+probe执行小型合成NTP训练和本地CPU性能检查，不下载数据，不作LM优劣判决。正式runner的新增方法与缓存参数见 [experiments/README.md](experiments/README.md)。
 
-```bash
-cd /root/isoHC
-RESULT_ROOT=/root/autodl-tmp/isoHC/results/0525_mechanism_gpu_48l \
-MEMORY_TARGET_GB=31 \
-NUM_WORKERS=8 \
-PREFETCH_FACTOR=8 \
-bash experiments/run_0525_mechanism_gpu_pipeline.sh
-```
-
-For the clean core comparison only:
-
-```bash
-METHODS="mhc isohc" \
-RESULT_ROOT=/root/autodl-tmp/isoHC/results/0525_core_mhc_isohc_48l \
-bash experiments/run_0525_mechanism_gpu_pipeline.sh
-```
+RDM已撤销主线资格；旧IsoHC、历史计划与用户源文保留原位，不发布当前执行指令。2027主会目标不变，方法价值由充分训练与强基线决定。

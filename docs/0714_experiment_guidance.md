@@ -1,3 +1,10 @@
+<!-- doc-status: historical -->
+> **Historical user source from 2026-07-14:** retained as context. Its hypotheses,
+> implementation directions, and tool instructions are not current guidance.
+> Follow the [current research owner](research/README.md) and
+> [current experiment plan](research/roadmap.md).
+
+<!-- doc-history-body-begins -->
 # IsoHC 实验指导（工作假设）
 
 > **文档性质：** 这是实验设计的参考与待验证假设，不是必须奉行的真理，也不是对当前代码、相关论文或未来结果的最终裁决。

@@ -1,3 +1,10 @@
+<!-- doc-status: historical -->
+> **Historical evidence snapshot from 2026-07-15:** preserve the original report;
+> current interpretation and evidence status are maintained in the
+> [research evidence ledger](research/evidence.md) and
+> [current roadmap](research/roadmap.md).
+
+<!-- doc-history-body-begins -->
 # HC Experiment Evidence Ledger
 
 **Status:** working evidence boundary, updated 2026-07-15. Generated artifacts

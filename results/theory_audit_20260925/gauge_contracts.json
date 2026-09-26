@@ -1,0 +1,139 @@
+{
+  "seed": 20260925,
+  "precision": "torch.float64",
+  "device": "cpu",
+  "python": "3.9.6",
+  "torch": "2.8.0",
+  "training_performed": false,
+  "checks": [
+    {
+      "name": "invertible_static_transport_free_vectors",
+      "max_error": 2.498001805406602e-16,
+      "tolerance": 1e-10,
+      "passed": true,
+      "scope": "Nonlinear algebraic recurrence; unrestricted read/write/exit vectors.",
+      "max_cumulative_condition": 6.542742293207443
+    },
+    {
+      "name": "static_gauge_preserves_depth_kernel",
+      "max_error": 2.7755575615628914e-16,
+      "tolerance": 1e-10,
+      "passed": true
+    },
+    {
+      "name": "arbitrary_gauge_transforms_input_and_exit_boundaries",
+      "max_error": 1.1102230246251565e-15,
+      "tolerance": 1e-10,
+      "passed": true
+    },
+    {
+      "name": "arbitrary_gauge_preserves_depth_kernel",
+      "max_error": 6.661338147750939e-16,
+      "tolerance": 1e-10,
+      "passed": true
+    },
+    {
+      "name": "orthogonal_exit_boundary_transform",
+      "max_error": 0.0,
+      "tolerance": 1e-10,
+      "passed": true,
+      "unchanged_exit_gap": 1.0,
+      "transformed_exit_sum": 0.0,
+      "required_sum_in_repo_class": 2,
+      "scope": "Exit transform leaves the fixed-sum parameter class."
+    },
+    {
+      "name": "singular_transport_rank_obstruction",
+      "passed": true,
+      "transport_rank": 1,
+      "identity_rank": 2,
+      "max_error": 9.560342516888455e-19,
+      "scope": "State-coordinate obstruction; not a claim that every singular model defines a new function class."
+    },
+    {
+      "name": "mean_preserving_kernel_lambda_squared",
+      "max_error": 2.0694557179012918e-12,
+      "tolerance": 1e-10,
+      "passed": true,
+      "lambda_values": [
+        0.01,
+        0.1,
+        0.5
+      ],
+      "intermediate_scale_max_error": 2.0428658764615193e-12,
+      "scope": "Fixed zero-mean vectors and exact mean-preserving H; says nothing by itself about loss changes or initial stream offsets."
+    },
+    {
+      "name": "mean_preserving_identity_has_rank_two_cross_cut_kernel",
+      "max_error": 0.0,
+      "tolerance": 1e-10,
+      "passed": true,
+      "rank": 2,
+      "scope": "Two past writes and two future reads, H=I; fixed-sum read/write vectors."
+    },
+    {
+      "name": "projection_between_steps_loses_exchange_return_path",
+      "max_error": 5.551115123125783e-16,
+      "tolerance": 1e-10,
+      "passed": true,
+      "product_of_projected_steps": 3.0814879110195774e-33,
+      "projection_after_full_product": -0.9999999999999994,
+      "discrepancy": 0.9999999999999994
+    },
+    {
+      "name": "repo_two_branch_logits_default_projection",
+      "max_error": 1.8480580676882852e-09,
+      "tolerance": 2e-06,
+      "passed": true,
+      "ungauged_identity_max_error": 0.0030878254192759705,
+      "max_transport_orthogonality_error": 0.00043864844207214314,
+      "max_transport_mean_error": 6.828569992527346e-08,
+      "max_read_write_fixed_sum_error": 2.0502613562456418e-07,
+      "max_read_write_squared_norm_change": 0.0005455977375490306,
+      "scope": "Actual TwoBranchHCTransformer; float64 forward, nonzero read/write coupling; no training."
+    },
+    {
+      "name": "repo_two_branch_logits_exact_projection",
+      "max_error": 5.551115123125783e-17,
+      "tolerance": 1e-10,
+      "passed": true,
+      "ungauged_identity_max_error": 0.010764494124333154,
+      "max_transport_orthogonality_error": 2.3447792438552953e-15,
+      "max_transport_mean_error": 2.220446049250313e-16,
+      "max_read_write_fixed_sum_error": 8.881784197001252e-16,
+      "max_read_write_squared_norm_change": 6.217248937900877e-15,
+      "scope": "Actual TwoBranchHCTransformer; float64 forward, nonzero read/write coupling; no training."
+    }
+  ],
+  "weight_decay_counterfactuals": [
+    {
+      "source": "docs/0605_alldoc/0525_results_raw/0525_fe_fair_deep48_p33013_20m/fe-deep-48l-512_mhc_seed0/run_summary.json",
+      "layers": 48,
+      "optimizer_steps": 1954,
+      "init_diag_bias": 4.0,
+      "logit_shrink_factor": 0.9685285196872673,
+      "predicted_single_step_sigma": 0.9217833874442609,
+      "measured_single_step_sigma": 0.9222056803603967,
+      "absolute_difference": 0.00042229291613582465,
+      "relative_difference": 0.0004579161949759333,
+      "predicted_composite_sigma": 0.00040213528766509636,
+      "measured_row_sum_error_mean": 0.004630791468419678,
+      "scope": "Symmetric 4I initialization; omits random init noise and task gradients. Close agreement does not prove gradients vanish. Composite is prediction only, not matched to another run."
+    },
+    {
+      "source": "docs/0605_alldoc/0524_results_raw/0524_deep_stress_512/deep-stress-512_mhc_seed0/run_summary.json",
+      "layers": 24,
+      "optimizer_steps": 3256,
+      "init_diag_bias": 4.0,
+      "logit_shrink_factor": 0.9481281735178846,
+      "predicted_single_step_sigma": 0.915554346579274,
+      "measured_single_step_sigma": 0.9156286492943764,
+      "absolute_difference": 7.430271510233677e-05,
+      "relative_difference": 8.114939955144228e-05,
+      "predicted_composite_sigma": 0.014482321400258735,
+      "measured_row_sum_error_mean": 0.006142647930876895,
+      "scope": "Symmetric 4I initialization; omits random init noise and task gradients. Close agreement does not prove gradients vanish. Composite is prediction only, not matched to another run."
+    }
+  ],
+  "passed": true
+}

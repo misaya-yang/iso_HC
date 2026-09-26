@@ -1,3 +1,8 @@
+<!-- doc-status: historical -->
+> **历史记录：不再作为当前研究判断、投稿主张或执行计划。**
+> 本文原文与数值保留；当前解释见[证据台账](docs/research/evidence.md)，理论边界见[理论基础](docs/research/theory.md)，研究目标与下一实验以[当前主线](docs/research/README.md)和[实验计划](docs/research/roadmap.md)为准。本文旧启动、删除、工具调用与投稿指令不再生效。
+
+<!-- doc-history-body-begins -->
 # IsoHC 第一阶段验证计划（单卡 RTX 5090，≤2 小时）
 
 ## 目标

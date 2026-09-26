@@ -1,0 +1,361 @@
+{
+  "schema_version": 1,
+  "updated": "2026-09-26",
+  "canonical_entry": "docs/research/README.md",
+  "instruction_entry": "AGENTS.md",
+  "scope": "Git-tracked and non-ignored Markdown/TeX. Classifications govern document authority, not experimental verification status.",
+  "maintenance": "Register new documents before use. Update current owners in place. Preserve historical bodies, raw summaries, and user sources; record new interpretations in current owners. The checker does not assess scientific truth or web-source validity.",
+  "documents": [
+    {
+      "path": "AGENTS.md",
+      "status": "current",
+      "owner": "AGENTS.md",
+      "reason": "Canonical working instructions and preservation rules."
+    },
+    {
+      "path": "README.md",
+      "status": "current",
+      "owner": "docs/research/README.md",
+      "reason": "Repository navigation, subordinate to the research decision owner."
+    },
+    {
+      "path": "docs/readme.md",
+      "status": "current",
+      "owner": "docs/research/README.md",
+      "reason": "Documentation navigation."
+    },
+    {
+      "path": "docs/research/README.md",
+      "status": "current",
+      "owner": "docs/research/README.md",
+      "reason": "Current research objective, contribution contract, and decision owner."
+    },
+    {
+      "path": "docs/research/theory.md",
+      "status": "current",
+      "owner": "docs/research/theory.md",
+      "reason": "Mathematical contracts, proofs, counterexamples, and scope."
+    },
+    {
+      "path": "docs/research/evidence.md",
+      "status": "current",
+      "owner": "docs/research/evidence.md",
+      "reason": "Current interpretation of identified experimental evidence."
+    },
+    {
+      "path": "docs/research/roadmap.md",
+      "status": "current",
+      "owner": "docs/research/roadmap.md",
+      "reason": "Current experiment design, decision rules, and submission plan."
+    },
+    {
+      "path": "docs/research/literature.md",
+      "status": "current",
+      "owner": "docs/research/literature.md",
+      "reason": "Primary-source novelty boundaries and remaining literature gaps."
+    },
+    {
+      "path": "docs/research/architecture.md",
+      "status": "current",
+      "owner": "docs/research/architecture.md",
+      "reason": "Implemented adjoint read/write algorithm and its initialization, theoretical scope and engineering contracts."
+    },
+    {
+      "path": "experiments/README.md",
+      "status": "current",
+      "owner": "docs/research/roadmap.md",
+      "reason": "Runnable entry points and implementation limitations."
+    },
+    {
+      "path": "paper/README.md",
+      "status": "current",
+      "owner": "docs/research/README.md",
+      "reason": "Manuscript status and pointers to current scientific owners."
+    },
+    {
+      "path": "agent.md",
+      "status": "compatibility",
+      "owner": "AGENTS.md",
+      "reason": "Legacy entry point; current policy belongs to AGENTS.md.",
+      "superseded_by": [
+        "AGENTS.md"
+      ]
+    },
+    {
+      "path": "docs/research/claude_handoff.md",
+      "status": "source_summary",
+      "owner": "docs/research/evidence.md",
+      "reason": "Attachment-reported results and source gaps, not independently verified evidence."
+    },
+    {
+      "path": "docs/0714_experiment_guidance.md",
+      "status": "historical",
+      "owner": "docs/research/README.md",
+      "reason": "Preserved user-provided July guidance; its hypotheses and tool directions are historical context.",
+      "superseded_by": [
+        "docs/research/README.md",
+        "docs/research/architecture.md",
+        "docs/research/roadmap.md"
+      ],
+      "body_sha256": "eaadbdeb076c7d159ce759d52db0eb2ebb48f0112ef65a420c6bcefdf4935956"
+    },
+    {
+      "path": "docs/0715_experiment_evidence.md",
+      "status": "historical",
+      "owner": "docs/research/evidence.md",
+      "reason": "July evidence snapshot retained for provenance; current interpretation belongs to the evidence owner.",
+      "superseded_by": [
+        "docs/research/evidence.md",
+        "docs/research/roadmap.md"
+      ],
+      "body_sha256": "8e71a26e88e1a3cb8e90457c5cf17963e3109acf15bbf7459b844624f4498871"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-14-hc-causal-experiments.md",
+      "status": "historical",
+      "owner": "docs/research/roadmap.md",
+      "reason": "Historical implementation plan retained for provenance; its task and launch directions are not current.",
+      "superseded_by": [
+        "docs/research/README.md",
+        "docs/research/roadmap.md"
+      ],
+      "body_sha256": "6c1ff3588de7f492424fcc4e7409548f59b406d38c8a5c41eb8067c8dc24754d"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-07-14-hc-causal-experiments-design.md",
+      "status": "historical",
+      "owner": "docs/research/architecture.md",
+      "reason": "Historical design proposal retained for provenance; current architecture contracts take precedence.",
+      "superseded_by": [
+        "docs/research/architecture.md",
+        "docs/research/roadmap.md"
+      ],
+      "body_sha256": "96eca9b941c83b3701b9b982fbef53833b1c5cf1156fdca8a78eaa16297b13ec"
+    },
+    {
+      "path": "results/theory_audit_20260925/README.md",
+      "status": "verification_receipt",
+      "owner": "docs/research/evidence.md",
+      "reason": "Offline verification receipt; not language-model training evidence."
+    },
+    {
+      "path": "results/depth_memory_contracts_20260925/README.md",
+      "status": "verification_receipt",
+      "owner": "docs/research/evidence.md",
+      "reason": "Offline checks for the candidate depth-memory primitive; not trained-model evidence."
+    },
+    {
+      "path": "prompt_for_fable5.md",
+      "status": "user_source_historical",
+      "owner": "docs/research/README.md",
+      "reason": "Preserved user-authored untracked prompt; historical source, not current instructions.",
+      "superseded_by": [
+        "docs/research/README.md",
+        "docs/research/theory.md",
+        "docs/research/evidence.md",
+        "docs/research/roadmap.md"
+      ],
+      "sha256": "49015e494c232e41db072ac1ffd490b47611f90bb642eefd5f862169e949b9d1"
+    },
+    {
+      "path": "gnn_plan.md",
+      "status": "historical",
+      "owner": "docs/research/README.md",
+      "reason": "Historical human-authored text; only the status prefix was added.",
+      "superseded_by": [
+        "docs/research/README.md",
+        "docs/research/roadmap.md"
+      ],
+      "body_sha256": "04ecbdea0b4bb1706d0ff1d61b8c981a4b2f2f92162602a9d9d524e5cddbb753"
+    },
+    {
+      "path": "isohc_stage1_2h_plan.md",
+      "status": "historical",
+      "owner": "docs/research/README.md",
+      "reason": "Historical human-authored text; only the status prefix was added.",
+      "superseded_by": [
+        "docs/research/README.md",
+        "docs/research/roadmap.md"
+      ],
+      "body_sha256": "c31f69f83df999d0bfa28b834cdba66414ced752a0d53525c4a55116f06e0aaf"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-25-isohc-project-cleanup.md",
+      "status": "historical",
+      "owner": "docs/research/README.md",
+      "reason": "Historical human-authored text; only the status prefix was added.",
+      "superseded_by": [
+        "docs/research/README.md",
+        "docs/research/roadmap.md"
+      ],
+      "body_sha256": "903ee84d3dbaee2c6baf08a2b177d962f1019e80133322cc3418957592d7c68b"
+    },
+    {
+      "path": "docs/0605_alldoc/0510_isohc_experiment_report.md",
+      "status": "historical",
+      "owner": "docs/research/evidence.md",
+      "reason": "Historical human-authored text; only the status prefix was added.",
+      "superseded_by": [
+        "docs/research/evidence.md",
+        "docs/research/theory.md"
+      ],
+      "body_sha256": "b2bcdb8681a6648c9eeefa19280f93a0be60e1adcc181a1a8a16cc42a43686bb"
+    },
+    {
+      "path": "docs/0605_alldoc/0524_lm_experiment_report.md",
+      "status": "historical",
+      "owner": "docs/research/evidence.md",
+      "reason": "Historical human-authored text; only the status prefix was added.",
+      "superseded_by": [
+        "docs/research/evidence.md",
+        "docs/research/roadmap.md"
+      ],
+      "body_sha256": "6f2dcf70cf86bdf07ead81fefdebc37481327ab8b1e899c448dd643a9b52d002"
+    },
+    {
+      "path": "docs/0605_alldoc/0525_fe48_overnight_report.md",
+      "status": "historical",
+      "owner": "docs/research/evidence.md",
+      "reason": "Historical human-authored text; only the status prefix was added.",
+      "superseded_by": [
+        "docs/research/evidence.md"
+      ],
+      "body_sha256": "08d9b3edbad26e6f3e619a2d58ee37355f86fa899ef05d7e9eb3d4e6a30b969c"
+    },
+    {
+      "path": "docs/0605_alldoc/0525_isohc_arxiv_draft.md",
+      "status": "historical",
+      "owner": "docs/research/README.md",
+      "reason": "Historical human-authored text; only the status prefix was added.",
+      "superseded_by": [
+        "docs/research/README.md",
+        "docs/research/theory.md",
+        "docs/research/evidence.md"
+      ],
+      "body_sha256": "e9471e274fb6dbed1e2cb611b0468a27e0c0d84a0c2945c34b5da61e9aaf0921"
+    },
+    {
+      "path": "docs/0605_alldoc/0525_posthoc_eval16_report.md",
+      "status": "historical",
+      "owner": "docs/research/evidence.md",
+      "reason": "Historical human-authored text; only the status prefix was added.",
+      "superseded_by": [
+        "docs/research/evidence.md",
+        "docs/research/theory.md"
+      ],
+      "body_sha256": "2b30ecb2ea0674b2afaa8a18d4485c0603690ee4ee2c0535a4016e42eb5c2fea"
+    },
+    {
+      "path": "docs/0605_alldoc/0525_teacher_followup_plan.md",
+      "status": "historical",
+      "owner": "docs/research/README.md",
+      "reason": "Historical human-authored text; only the status prefix was added.",
+      "superseded_by": [
+        "docs/research/README.md",
+        "docs/research/roadmap.md"
+      ],
+      "body_sha256": "050d2add619007e48001d775bc8ceef81e79650ff5a428f5e17039c5636ca628"
+    },
+    {
+      "path": "docs/0605_alldoc/0605_full_report.md",
+      "status": "historical",
+      "owner": "docs/research/evidence.md",
+      "reason": "Historical human-authored text; only the status prefix was added.",
+      "superseded_by": [
+        "docs/research/evidence.md",
+        "docs/research/theory.md"
+      ],
+      "body_sha256": "8df70a98a2dbd3993393c22709d7ef57b0bda690ad8675db6be5e91f0d22d14a"
+    },
+    {
+      "path": "docs/0605_alldoc/comprehensive_summary.md",
+      "status": "historical",
+      "owner": "docs/research/README.md",
+      "reason": "Historical human-authored text; only the status prefix was added.",
+      "superseded_by": [
+        "docs/research/README.md",
+        "docs/research/evidence.md",
+        "docs/research/roadmap.md"
+      ],
+      "body_sha256": "d1cde05b33b24ca47c387f71a0425c93dce1576c2301f72c2b766745e965a7a2"
+    },
+    {
+      "path": "docs/0605_alldoc/gnn_experiment_report.md",
+      "status": "historical",
+      "owner": "docs/research/evidence.md",
+      "reason": "Historical human-authored text; only the status prefix was added.",
+      "superseded_by": [
+        "docs/research/evidence.md",
+        "docs/research/roadmap.md"
+      ],
+      "body_sha256": "cb3f092f6e264cf99d1eaae42409124270e06d0689ea51ace55508d3f7d7df04"
+    },
+    {
+      "path": "paper/isohc_arxiv/main.tex",
+      "status": "historical",
+      "owner": "docs/research/README.md",
+      "reason": "Historical human-authored text; only the status prefix was added.",
+      "superseded_by": [
+        "docs/research/README.md",
+        "docs/research/theory.md",
+        "docs/research/evidence.md"
+      ],
+      "body_sha256": "cd00592265ee961cc75a4613eb369cab3e0ae3ee147223828c656bce445458a4"
+    },
+    {
+      "path": "docs/research/rdm_proposal_20260925.md",
+      "status": "historical",
+      "owner": "docs/research/README.md",
+      "superseded_by": [
+        "docs/research/README.md",
+        "docs/research/architecture.md",
+        "docs/research/roadmap.md"
+      ],
+      "reason": "RDM blueprint retained after withdrawing active priority on engineering and learning-complexity grounds; not a measured impossibility result.",
+      "body_sha256": "9095e4f23a7f4f96302853aa6606e38bce194cf6aec422d552df55d6bdb9cc16"
+    },
+    {
+      "path": "results/adjoint_hc_20260926/README.md",
+      "status": "verification_receipt",
+      "owner": "docs/research/evidence.md",
+      "reason": "Full-model contract, synthetic NTP integration training and local CPU timing; not natural-language or SOTA evidence."
+    }
+  ],
+  "raw_groups": [
+    {
+      "pattern": "docs/0605_alldoc/0510_results_raw/**/*.md",
+      "status": "raw_immutable",
+      "owner": "docs/research/evidence.md",
+      "reason": "Generated historical summaries preserved byte-for-byte; reinterpretation belongs to the evidence owner.",
+      "sha256": {
+        "docs/0605_alldoc/0510_results_raw/stage1_cuda_projection_leftfix/projection_sanity.md": "0ecc961c0a284691d0cbe3f7edbe536915b033f99a6a1f6ad69cc6bdce0857ed",
+        "docs/0605_alldoc/0510_results_raw/stage1_cuda_smoke_manual/tiny_smoke_baseline.md": "fdc7e8ab564cd2a869b6e29b5bed7cfedc5cddff8601775c3e146bc5b9e782ed",
+        "docs/0605_alldoc/0510_results_raw/stage1_cuda_smoke_manual/tiny_smoke_isohc.md": "65d522e3244ac8f79d506a375e06f1b313a257c5c43f4c339c7152cc5e4ba194",
+        "docs/0605_alldoc/0510_results_raw/stage2_depth_scaling/tiny_smoke_baseline.md": "d743cb9fd19158996b8d61ab88570970edf7edb5e108e1ceb412cfee334c135f",
+        "docs/0605_alldoc/0510_results_raw/stage2_depth_scaling/tiny_smoke_isohc.md": "6cd5a1e56ed94310d08fddc89c44670474595d2d480df9b41b556477793e681d",
+        "docs/0605_alldoc/0510_results_raw/stage2_precision/precision_depth_suite.md": "a77c0cb2b46178788bf49a9b2821b6b48ccb53f1fc944f19e7c9cbcb70784a77",
+        "docs/0605_alldoc/0510_results_raw/stage2_real_text/real_text_baseline_L16.md": "1939d61355f4792496244da69051a45cc5894c40a7620ff047ba685325dfc9a4",
+        "docs/0605_alldoc/0510_results_raw/stage2_real_text/real_text_baseline_L32.md": "7e3d320613c0eeffa5d103589326a49b186a4bb2284d086bd356609f6a090ce5",
+        "docs/0605_alldoc/0510_results_raw/stage2_real_text/real_text_isohc_L16.md": "195239f5f0df70344d2056b5caddc7713808937796007f2a68f06a1cd48c08fa",
+        "docs/0605_alldoc/0510_results_raw/stage2_real_text/real_text_isohc_L32.md": "aada03a24d97a3d3c148ad9e50618c3e02510864e4ee0b9a8c00ba5fb82f9031",
+        "docs/0605_alldoc/0510_results_raw/stage2_real_text_grid_h512/real_text_baseline_L16.md": "c860d98f14797f2e7e6817bbb159284b01431e103d446e49cd24fe2dcf35fe50",
+        "docs/0605_alldoc/0510_results_raw/stage2_real_text_grid_h512/summary.md": "1fa8dd106b5797eef152a3eadf281f5a70b707c4feeb6912389b8c292d430dab",
+        "docs/0605_alldoc/0510_results_raw/stage2_real_text_grid_h512_followup/real_text_baseline_L32.md": "70da5c1c4cc365c9283c515cbd6cab1d38ecea2356f27d91c8676e001d058225",
+        "docs/0605_alldoc/0510_results_raw/stage2_real_text_grid_h512_followup/real_text_isohc_L16.md": "68a261dfc9a0682ee37a698bcd8507326d14c56023b8de24b4abe2c562b99ac7",
+        "docs/0605_alldoc/0510_results_raw/stage2_real_text_grid_h512_followup/real_text_isohc_L32.md": "8750e9576863131b1e83ec9d378d291f2d1f55096c87e88e61ca2247bbb06b00",
+        "docs/0605_alldoc/0510_results_raw/stage2_stability_detectors_core/stability_detectors.md": "997e5449a1cfbccbe3fb8d5bebb30234525ef011a391e0e440daef8cfc24b0a8"
+      }
+    },
+    {
+      "pattern": "docs/0605_alldoc/0525_results_raw/**/*.md",
+      "status": "raw_immutable",
+      "owner": "docs/research/evidence.md",
+      "reason": "Generated historical summaries preserved byte-for-byte; reinterpretation belongs to the evidence owner.",
+      "sha256": {
+        "docs/0605_alldoc/0525_results_raw/0525_core_mhc_isohc_48l_p51198/posthoc_eval16/fe-deep-48l-512_isohc_seed0_mechanism_analysis.md": "c79def3e2928093ae0e6ec080347689042cd7ddb57bb1b9e6476a37b5638a444",
+        "docs/0605_alldoc/0525_results_raw/0525_core_mhc_isohc_48l_p51198/posthoc_eval16/fe-deep-48l-512_mhc_seed0_mechanism_analysis.md": "47c633746181433ee2fb766f71726ffcc730c24fdadc2df0f17406c2ac9fb3ce",
+        "docs/0605_alldoc/0525_results_raw/0525_fe_fair_deep48_p33013_20m/overnight_summary.md": "213dd5a7b9b961f8820ca6d0dc3822d680174b095db45745577550481d1099cd"
+      }
+    }
+  ]
+}
