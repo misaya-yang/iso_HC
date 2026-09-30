@@ -1,82 +1,100 @@
-# 实验路线：最小原语、有效训练与真实成本
+# 实验路线与结项决定：R5 已关闭
 
-更新：2026-09-26，R4。目标见 [研究入口](README.md)，架构选择合同见 [architecture.md](architecture.md)。RDM训练与lease/replay开发路线已撤销优先级；历史思路不再作为默认下一动作。
+状态：**R5 CLOSED，按用户要求本轮结项。** 当前没有活动R5训练优先级或自动续训安排。算法和代码保留为研究资产；结果、实际训练范围、费用及关机记录由 [R5 closeout 报告](reports/R5_CLOSEOUT_20260929.md) 统一管理。R4作为参考资产，RDM保持归档。
 
-## 0. 当前已实现算法与下一关键比较
+## 当前关闭决定
 
-`adjoint-hc`已接入完整Transformer与训练工厂，使用动态单位地址绑定读写；算法见 [architecture.md](architecture.md)。旧的“尚未选定”状态已结束，但候选不等于胜者。
+已完成的gain/phase两组LR前缀均为每臂33,554,432 tokens。3e-4下gain/phase持出NLL为 `5.387013 / 5.391525`；6e-4下为 `5.065748 / 5.086086`，两组均由gain领先。完整更新profile中phase比baseline慢约18%，gain接近baseline。terminal仅有3e-4完整前缀，与phase相差不超过0.000208 nat；其6e-4轨迹中断，不能据此宣称跨LR确认或内部交汇等价。
 
-当前完成的是标准NTP集成训练与CPU成本probe，不是自然语言方法验证。合成Markov源不要求多流记忆，不能用各臂几乎重合的loss宣布成功或失败。当前语料目录为空，没有在本轮下载正式训练数据。
+用户已要求关闭本轮，原实例已于23:51 UTC确认OFF。停止R5优先推进，原续训、补齐七臂、增seed和扩规模安排均失去执行效力。268,435,456 tokens的完整诊断未完成；本轮结论限定为短预算质量—成本尚未支持继续优先投入phase，不是成熟LM方法族失败的结论。后续研究另设明确问题、依据和授权。
 
-下一项有判别力的训练采用同主干、同数据顺序、同有效batch和合理优化器分组：
+## 原计划参考（CLOSED）
 
-| 比较 | 要排除的解释 |
+以下D0–D1、七臂/D预算、归因规则和扩规模安排保留为封存计划，均不构成当前执行指令。**完整七臂前缀加268,435,456 tokens续训协议为 NOT_EXECUTED / CLOSED**；已经完成的准备、profile和部分前缀只按closeout的实际回执登记，不能把计划表当完成清单。
+
+## 0. 原问题与实验摘要（已封存）
+
+已有事实：R4完整模型和tiny合成NTP可训练，但收益与冻结输入carrier几乎重合，且真实历史核初始一阶导数为0。R5的一次固定深度交汇让真实早层branch获得一阶梯度，并保留阶段内固定地址的局部伴随合同。**同一梯度可由gated boundary skip得到，且仅末端交汇已能打开全部body历史梯度**，所以首轮必须面对terminal、boundary-skip和post-frozen。
+
+主终点是固定持出文档的token加权NLL随真实训练tokens和总时间的曲线。完整训练吞吐/峰值显存、route变化、pre/post辅助写入和任务影响用于归因；谱、写入量和可训合同不代替质量。若gain、boundary skip或Block AttnRes在质量—成本上已经更值得采用，就改变设计决定，不扩展控制器来维护故事。
+
+## 1. D0：原准备合同（已封存，完成状态见closeout）
+
+- 独立核验初始化因果核、真正history的一阶导数、坐标/全局函数与梯度等价、局部谱和多阶段反例。回执入口：[verify_phase_initialization.py](../../experiments/verify_phase_initialization.py)。
+- 完整模型核验共同主干/初始logits/主干梯度、prehistory梯度、非零路由下token因果及batch隔离、BF16有限性；主方法与strongskip/post-frozen初始梯度对齐。
+- 新runner验证全局update/LR/token预算、固定非重叠validation、缓存不存在/全NaN失败、独立data RNG、完整optimizer-boundary保存、连续训练与resume一致。旧runner保留作历史入口，不用于R5科学排序。
+- 原始数据先按文档内容hash分流train/validation，再tokenize；相同文档不得跨split。记录官方dataset revision、tokenizer、EOS、cache身份和实际token数，不将随机tokens当语言数据。
+
+9月29日执行时用户曾授权AutoDL准备与后续带卡启动；这段是当时授权背景，本轮已按用户要求关闭，不作为新租、开机或继续训练的授权。具体endpoint、实例身份及OFF确认见closeout，不把历史 `agent.md` 当活机器记录。
+
+## 2. D1：原单卡诊断与七臂协议（完整协议未执行，已关闭）
+
+首个形状建议24L×256d、4heads、T512、GPT-2词表50257，约31.88M参数；所有方法共享主干seed、数据顺序、有效batch、branch初始化缩放、optimizer分组和评价集合。默认中间block为唯一交汇点，第一轮不搜索最优cut。使用标准NTP，不增加teacher或辅助loss。
+
+| 第一组训练臂 | 科学职责 |
 | --- | --- |
-| baseline / 强residual-gain vs adjoint-hc | 是否只是普通尺度或更多状态的早期优化差异 |
-| 同carrier、同两流、同初始化的自由读写 vs tied单位读写 | 对齐约束是否值得付出表达力限制；此精确匹配控制仍待实现，不能以旧四流proxy冒充 |
-| adjoint-hc-frozen-aux vs主方法 | 收益是否仅为固定输入长skip |
-| adjoint-hc-static vs动态 | token条件化是否提供额外价值或只增加成本 |
-| signed / zero / copy carrier | 初始化学习信号来源；zero的死区是负控制，不是弱baseline供主方法取胜 |
+| 调好的 `baseline` | 真实优化水平与成本参照 |
+| `gain` | 标准增益/尺度是否已解释改善 |
+| `phase-adjoint` | 候选 |
+| `terminal-adjoint` | 仅在出口交汇的更小替代，检验内部交汇是否必要 |
+| `boundary-skip` | 同初始history梯度的强最小替代 |
+| `phase-adjoint-post-frozen` | 持续post记忆更新是否必要 |
+| `block-attnres` | 相近深度聚合的强方法，不拖到最后才比较 |
 
-代码已有五个adjoint方法ID。既有runner支持加载本地token caches，可用于后续正式训练；沿用的旧全参数AdamW配置尚未调优，不可宣称已提供最佳训练配方。主线不添加bounded-dual、更多memory controller或新损失，除非上述比较明确支持。
+`phase-adjoint-shear`和R4在初始profile中一起测；若候选显示有意义信号，shear尽早进入匹配训练来检验对齐，而不将旧四流静态proxy冒充自由动态对照。`phase-adjoint-frozen`只是死区/入口负控制，不作为取得论文收益的弱对手。
 
-## 1. 当前可反驳的机制假设
+推荐开发观察范围为约250–500M实际tokens/臂，保存中途checkpoint和曲线；该范围是小规模机制开发，不是充分成熟LM/SOTA。预算按GPU实测吞吐调整。短段只用于发现故障和估计学习状态，不凭任意几分钟null宣判方法族失败。若baseline仍未学会数据分布、评价没有区分力或运行中断，标未判定并修定位问题。
 
-当前假设是：在同读取与单位自作用下，绑定读写能去掉无助于局部极端奇异值的剪切，同时让不同层使用不同的状态视图；这种限制有机会改善优化和质量—成本。固定地址的局部比较已有证明，动态网络收益仍未知。长深度和自由读写呈现强非正规放大的条件，是机制上更有辨别力的设置；不能人为破坏baseline来制造优势。
+强baseline先采用所有臂一致的输出投影depth-scaled init；LR从已有合理配方的小范围选择，如3e-4/6e-4，以开发集选择后冻结。不能只给候选调参，也不能机械相同batch使较快/省显存的baseline浪费资源。科学比较共同有效batch，真实系统比较另允许各臂合理microbatch并单列其身份。
 
-保持主干、数据、入口和有效batch，比较同carrier的自由读写与伴随约束，并记录任务误差、路由变化和真实成本。若自由读写更好、冻结辅助写入保留收益，或强单流gain已经解释全部改善，就分别否定“对齐更值得”“可更新记忆必要”或“多流必要”的相应解释。谱/能量改善不能代替任务结果。
+原拟完整协议（**NOT_EXECUTED / CLOSED**）为：七臂各做LR 3e-4/6e-4的2,048 updates前缀（33,554,432 tokens），从开始即使用总16,384 updates的同一全局日程、256 updates warmup及0.1倍末端LR。按**前缀最后checkpoint**的全持出集NLL选择LR，相等选3e-4，失败轨迹不参与。每臂选中前缀精确resume到16,384 updates（268,435,456 tokens）；末端较优也不能删掉其内部phase对照。所有臂model seed419、data seed20260929、microbatch32/accum1，固定3,906个validation blocks、1,999,872 targets，每2,048 updates评价/保存。该seed是开发，不是独立确认。实际只完成closeout登记的部分前缀，没有完成此七臂与完整D预算。
 
-## 2. 最小可运行候选与工程账同步产生
+若boundary/post-frozen各自选中LR与phase不同，在七条主要轨迹后，以phase选中LR继续对应已训练前缀，post-frozen优先于boundary。主质量比较用各自相同调参预算，机制差值用匹配LR；优化控制恢复收益时，不宣称机制必要。保留自动关机前30分钟的保存余量，并以实测吞吐逐阶段检查能否在UTC07:15结束；预算不够的轨迹明确记未完成，不能用不同tokens排序。第一次GPU成本上限按20元控制，provider UTC07:45关机，不自动追加预算。
 
-R4已具备完整forward/backward及标准NTP训练路径；接下来应做有判断力的LM训练和同场GPU成本测量。保留规则张量与可融合的逐元素计算，不因追求完美kernel推迟科学判断，也不在缺少收益证据时增加控制模块。
+核心开发seed与确认seed分开；初步配对重复覆盖方法效应与训练随机性，不把文档bootstrap当训练seed。必要的同width浅深对照回答方法×深度互动，不能将改变width后的近参数匹配直接解释为纯深度效应。
 
-同时测量或明确估算：状态/激活、HBM读写、中间张量、kernel数量、recompute、精度、梯度，以及控制或监督的额外代价。输入依赖或稀疏不是自动否决项，但其高效映射需有具体依据。
+## 3. 原工程测量与有限算力预算（已封存）
 
-本轮已有adjoint完整模型CPU forward/backward测量，尚无GPU测量。CPU两个形状的结果只描述本机参考实现，不外推GPU开销或正式LM速度；旧RDM的slot检查仍不提供工程证据。
+先对每个实际shape/臂测完整forward、CE、backward、AdamW和zero_grad后的稳态tokens/s；CUDA同步、编译预热、eval/checkpoint分别记录。显存探测必须有Adam状态，不能只forward/backward；用共同effective batch和梯度累积匹配优化更新。每个验证点记录跨resume的累计时钟；checkpoint须连同timing sidecar保存。first-update/warmup可能包含lazy compile与allocator启动，不能把wrapper构建时间称纯编译时间。
 
-## 3. 比较安排
+若实测吞吐为 \(r_i\) tokens/s，臂i的训练tokens为 \(D_i\)，seed数为 \(s_i\)，则训练小时估算为
 
-| 问题 | 最重要的比较 |
+\[
+H_{train}=\sum_i s_iD_i/(3600r_i).
+\]
+
+另外加上实际compile、validation、checkpoint与准备时间。不引用旧5090回执预测新vGPU速度，不先给虚构的GPU小时保证。先测再配置有效实验；无卡准备阶段不让付费GPU空等。局部kernel快不能冒充端到端快。
+
+本版主干是GPT-2式GELU和绝对位置编码；结果只覆盖该诊断骨架。出现可复核收益后，应转到现代RoPE/SwiGLU主干验证兼容性。当前没有KV cache，暂不主张decode延迟、KV增量或分布式通信收益。
+
+CUDA初始化核验已发现默认Inductor no-grad评价对phase与baseline产生不同数值路径，旧默认编译one-step的约0.005 nat差不计作质量收益。正式训练显式使用`emulate_precision_casts=True`，反向在autocast之外时指定`backward_pass_autocast=off`；所有持出NLL使用原始模型的共同eager BF16评价。数值策略写入resume身份。更改策略后重新初始化质量轨迹，不继续旧默认策略的preflight checkpoint；旧测量原样保留。
+
+## 4. 原机制归因与决定规则（已封存）
+
+首轮主终点是在事先冻结的实际预算 \(D\) 后，**最后 checkpoint** 的固定持出集token加权NLL；`best_nll`仅记录训练过程，不用于方法排序。开发阶段的投入优先阈值预设为 \(\delta_q=0.02\) nat（约2% perplexity），不是方法有效性的普适边界；小于该值或单seed不确定的结果仍可按成本和后续精度决定，不能当作等价证明。预算由实测吞吐和明确费用上限确定，在查看正式比较的质量结果前冻结。
+
+关键差值为 \(L_{boundary}(D)-L_{phase}(D)\) 和 \(L_{post-frozen}(D)-L_{phase}(D)\)。归因必须按阶梯展开：phase对post-frozen主要检验post持续写入；post-frozen对boundary-skip检验pre读取/绑定增益这一组合，不能将其直接解释为对齐收益；对齐解释需要匹配shear训练。phase只胜过boundary-skip属于复合差异，不能独立证明post记忆必要。
+
+开发展示固定tokens及累计时间的完整曲线；若报告达到共同NLL的时间，目标须在相应确认比较前冻结，未达到明确记未达到。训练seed提供训练随机性的证据；持出文档重采样只度量评价不确定性，连续checkpoint不当作独立重复。预算不足时收窄此次结论。确认阶段为各强方法提供相同调参预算，不能将共用一个开发LR直接称为各方法充分调优。
+
+| 观察 | 下一决定 |
 | --- | --- |
-| 是否只改善尺度/初始化 | 调好的单流、residual gain、相同归一化与优化器分组 |
-| 是否需要新增状态 | identity-HC、相同总状态与分支计算的控制 |
-| 是否需要新的transport | faithful动态mHC/oHC及最相关的无transport控制 |
-| 是否胜过已有聚合/改写 | Block AttnRes、DDL；RMT/xHC按候选机制选入 |
-| 是否实际更值得采用 | 各臂合理调优后的等质量成本与质量—时长/显存曲线 |
+| terminal匹配或优于内部phase | 内部交汇未显示必要性，优先末端构造；共同收益不全归于内部phase |
+| phase超过gain，但boundary skip同样好 | 优先更简单skip；撤销“阶段内可更新记忆必要”主张 |
+| post-frozen同样好 | post持续写入未显示必要性；保留pre交汇机制的可能收益 |
+| shear更好 | 对齐约束可能损失有效表达力；不把局部定理当训练最优 |
+| candidate质量更好但慢 | 用达到共同目标NLL的总成本判断；只优化已定位的工程瓶颈 |
+| route/谱改善而任务无变化 | 不升级为方法优势；检查具体错误，否则结束该代理诊断 |
+| 候选收益在充分开发段消失 | 收窄到短期优化效应；不把早期点估计写为成熟收益 |
+| 有重复的质量—成本优势且强消融支持 | 方法冻结，进入独立尺度/seed确认 |
+| 实现故障或训练未有效完成 | 未判定；恢复有效checkpoint并修明确错误 |
 
-不把所有方法、参数和种子作全笛卡尔积。主对照尽早包含相关强方法；对内部因果实验与原论文配方复现分别标注身份。相同batch不是公平的充分条件，不同最优kernel也不是不公平。
+初始化gradient匹配是归因控制，不是所有臂训练轨迹都应该相同。临时checkpoint ablation只说明当前模型依赖；从头训练的strongskip/post-frozen才检验新增机制是否值得。
 
-## 4. 科学规模不因简化设计而降低
+## 5. 原2027主会贡献与扩规模合同（未启动，已封存）
 
-可复用的候选阶段：100–150M、2–3B tokens用于开发；350M与约7–10B tokens用于独立确认；约1B、20–30B tokens起用于所声明规模的主论文比较。根据成熟配方、学习曲线和效应大小调整，不将这些数字当固定授权或普适充分训练定义。
+论文应形成一个连贯结论：**残差历史可以在精确baseline起点获得有效信用分配，而阶段内绑定读写在限制表达力后仍更值得采用。** 需同时具备最近先行工作的逐式区别、有效自然语言训练、强skip/gain/shear/AttnRes比较、至少两个相关尺度/深度条件、关键确认的独立训练seed和实测质量—成本。定理、测试、单seed短训练都不能独立承担该主张。
 
-方法冻结后再增加独立深度/规模和分布条件。若需更大规模才能回答核心问题，按科学价值安排，不用反复小模型null替代。保留可恢复checkpoint。
+开发通过后，100–150M约2–3B tokens用于稳定比较和配方选择；方法冻结后，350M等独立量级、关键至少3个确认seed及未用于开发的持出文档。约1B/20–30B tokens是资源允许且贡献需要时的扩展，不是本轮默认launch或录用的普适必要条件。若只能获得小模型结果，论文主张须相应收窄，不能靠SOTA措辞填补规模证据。
 
-## 5. 工程评价必须对应使用场景
-
-- 训练：稳态tokens/s、峰值显存、反向和checkpoint开销、达到目标loss的总时间；
-- prefill：随batch/context变化的吞吐和延迟；
-- decode：小batch逐token延迟及实际状态开销；
-- kernel profile：用来解释端到端变化，不能拿局部快了若干倍冒充全模型加速；
-- 分布式：若主张覆盖该场景，实测或明确限定pipeline/tensor parallel通信与重算影响。
-
-事先按用途定义有意义的质量和成本差，不编造统一百分比门槛。报告失败/不稳定条件，不只选成功配置。状态范数有界、冻结carry不扩张都不是整网梯度稳定证明。
-
-## 6. 统计和结果判断
-
-开发与确认分离；关键确认比较计划至少3个独立训练seed，并根据配对差值的区间精度调整。文档bootstrap不替代训练重复，不显著不等于等价。使用持出NLL和有区分力的下游任务，自由生成结果与BPB分开。
-
-| 观察 | 决定 |
-| --- | --- |
-| 最小候选有任务收益且成本合理 | 保留，完成必要确认再扩展；不为故事完整增加模块 |
-| 简单已知控制已经恢复全部收益 | 重归因；不能把更复杂结构作为新贡献 |
-| 任务改善但实现慢 | 判断同质量总成本，定位可修工程瓶颈；不立即否定也不承诺kernel必能修好 |
-| 仅代理量变好 | 不升级为架构优势；检验与真实错误的联系 |
-| 故障、未完成或无区分力 | 未判定，修明确缺口 |
-| 必須同时依赖多个未验证机制才可能有效 | 降低优先级，先缩成可独立检验的最小构造 |
-
-## 7. RDM与旧研究资产
-
-RDM已保留为 [历史提案](rdm_proposal_20260925.md)，不再默认训练forecast、lease策略或大模型。恢复该方向需要新的必要性与可训练/工程证据；换名或删一个模块不构成理由。现有slot probe仅供原语/反例参考。
-
-IsoHC、gauge、WD与历史LM/GNN证据继续按其原合同使用。2027主会目标不变，但当前已有可运行adjoint算法，尚无SOTA或solid-accept证据。先检验它是否值得规模化，再用充分训练和强比较建立结论。
+若最终只留下一个更好的HC初始化/skip，应重新判断贡献度，不能强行沿用“新的残差记忆工作流”。共享query bank因直接对应factorized attention和SANA/MHAR不在本轮并行开发；RDM、压缩优先和旧IsoHC谱故事都不恢复。

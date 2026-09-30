@@ -1,6 +1,6 @@
 # 残差架构前沿、竞争方案与新颖性边界
 
-核查：2026-09-25/26，R4。当前候选是已实现的伴随读写残差，直接先行性见本页末节；RDM已撤销主线资格，下文对其区别的分析保留为历史设计评估。以下依据原论文页面、全文或原始出版记录；不是穷尽检索，也不是新颖性保证。检索不到同名结果不证明首次发现。
+核查：2026-09-29，R5。本轮分段伴随读写候选已停止推进，直接先行性与新颖性边界见本页R5节；R4及2026-09-25/26的RDM评估保留为先前设计背景，RDM已撤销主线资格。以下依据原论文页面、全文或原始出版记录；不是穷尽检索，也不是新颖性保证。检索不到同名结果不证明首次发现。
 
 ## 已经被覆盖的部分
 
@@ -79,3 +79,30 @@ Gauge、Hankel阶、WD归因、训练过的SO(n−1)对照，可以构成研究�
 [CliffSearch作者论文](https://cliffsearch.ai/assets/cliffsearch_preprint.pdf)的导出资产含GrassmannianSubspaceRouting：子空间投影读、lifting写及额外门。它是必须比较的机制邻近；其Table6将raw-best G3/H2判为跨样本泄漏无效，另一个同名节点H1通过特定审计，不能把节点混为一个有效SOTA结果。当前实现没有复用其代码，并在完整模型上单独测试token因果性和样本隔离。公式邻近不因某节点实现错误而消失，首次性仍未建立。
 
 [Orthogonal Residual Updates，NeurIPS 2025](https://proceedings.neurips.cc/paper_files/paper/2025/hash/67c15da4a9340140c60783d9a175fd3f-Abstract-Conference.html)将更新在特征维上正交化；本算法在stream维选择读写地址，不应混称为同一个“正交残差”方法。仍需在真正任务上比较相关强方案，而非只靠概念区别。
+
+## R5新增原文核查与被排除的改名路线（2026-09-29）
+
+本轮原文读取由主代理执行；子代理提供独立本地代数反驳，没有将子代理报告误记为网页全文核验。检索不是穷尽性保证。新候选 phase-adjoint 的规则见 [architecture §8](architecture.md)，证明见 [theory §11](theory.md)。
+
+| 原始来源与本轮范围 | 对当前设计的实际约束 |
+| --- | --- |
+| [AttnRes原PDF，§3–4、§6.2](https://arxiv.org/pdf/2603.15031) | 已有固定pseudoquery、Block历史、两阶段读取及online-softmax合并。固定状态/深度核解释、可训query和融合不能独立作为新增贡献；不能拿其naive实现证明新方法更快。 |
+| [SANA-Video2.0，§3.3，式(2)](https://arxiv.org/html/2607.21553v1) | 已跨深度共享attention与FFN query，源含completed blocks和可变partial。共享查询已有直接方案；将固定query的统计流式化首先是执行方式，反复提交变化的partial会错误计数。该工作在视频扩散，不等于LM同资源结果。 |
+| [MHAR，原全文与摘要](https://arxiv.org/html/2607.27230v1) | 已按feature子空间拆深度softmax、多头及保函数delta转换。head split和zero-gated转换不作为新原语。本轮没有独立复现其训练/production kernels。 |
+| [Momentum ResNets，ICML2021正式条目](https://proceedings.mlr.press/v139/sander21a.html) | 通过动量改造残差已是已发表方向；residual+EMA/二阶更新不因改叫depth memory成为新方法。这里只核验正式条目和摘要，未把全部LM后续文献穷尽。 |
+| [Set Transformer，ICML2019正式条目](https://proceedings.mlr.press/v97/lee19d.html) | learned seed pooling和固定潜在摘要有更早邻近；shared content pooling也必须与有限特征/因子化attention区别。 |
+| [DDL v4全文，§2–5](https://arxiv.org/html/2601.00417v4) | 同方向read-compare-write、scalar与expanded state已有直接构造；其单run、equal-token及容量归因边界按原文保留，不拼为统一SOTA榜单。 |
+| [xHC全文，§3、§5](https://arxiv.org/html/2607.14530v1) | 丰富写入和跨子层读取复用已有算法/工程方案。新方法需算反向与数据流，不能仅按新增参数或FLOPs推断快。 |
+
+共享bank的代数若为 (y=\sum_r a_rU_r/Z_r\)、(U_r=\sum_j e^{p_r^Tk_j}v_j\)，则是有限特征归一化attention；混合pool不等于以混合query作softmax。[Efficient Attention](https://arxiv.org/abs/1812.01243)、[LambdaNetworks](https://arxiv.org/abs/2102.08602)、[Agent Attention](https://arxiv.org/abs/2312.08874)是子代理提出的直接公式邻近，**本轮尚未逐式核读其全文**。因此bank不作为本轮新主方法。其固定prefix检索span/rank不超过bank数，加入uniform方向最多再加1；这只是接口限制，不是完整LM能力下界。
+
+phase-adjoint也不是逃出先行性压力：全局是identity-HC的互逆尺度aligned read/write，局部是一次固定scaled mixer加阶段内unit tied。待测区别是exact-baseline、真实跨cut历史的一阶信号和局部对齐的组合，最强替代是gated boundary skip；普通gauge、初始化或局部条件数本身不承担首次性。若这些已有机制的简单控制恢复全部收益，按实际结果重归因。
+
+
+末端反例进一步收窄新颖性：`terminal-adjoint`在全部body之后做一次出口混合，就打开全部body writer的真实history梯度，因此“首次打开残差历史信用分配”或“必须内部阶段”均不可由当前证明支持。内部phase相对terminal真正待测的是**更早让历史改变后续branch计算是否值得**；terminal在非零路由后也会读取辅助状态，不能将它描述为训练期间始终仅做late pooling。两者都保留两条流和同数量router，较少内部结构不等于已测更便宜。
+
+§11.8的AR/Brownian Gram刻画承担指定函数保持接口的设计预算；其经典分解、正尺度/串行/精确条件以及近似与并列reader反例必须保留。论文若推进，应把贡献落在可用初始化、窄接口刻画和强对照之外的架构选择，不能将参考地址秩改叫任务记忆容量下界。
+
+已进一步核读 [CliffSearch节点公开源码](https://cliffsearch.ai/best-node/) `g002_n0024_66b987`：读 \(U\alpha\)，写 \(\operatorname{diag}(\beta)U\gamma\)，一般不单位绑定，也不固定自作用为1；逐流门可将write移出所投影子空间。具体限制、初始化与一次交汇的区别见 [theory §10.4](theory.md)。该核查只建立直接project/lift先行性和合同区别，不借node alias或自动review评分认定benchmark有效、工程更快或创新成立。
+
+本轮关闭后，不再以这些数学/参数化区别维持phase优先级。早期双LR前缀未超过强gain，尚无支撑主会方法主张的额外质量—成本证据；见 [收尾报告](reports/R5_CLOSEOUT_20260929.md)。

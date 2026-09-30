@@ -1,0 +1,39 @@
+{
+  "status": "passed",
+  "scope": "Canonical numerical policy and terminal control local/remote CPU contracts. Tiny synthetic optimization included; no natural-language quality result.",
+  "local": {
+    "python": "3.9.6 (default, Aug 25 2026, 21:26:21) \n[Clang 21.0.0 (clang-2100.3.34.2)]",
+    "tests": 78,
+    "seconds": 3.993,
+    "command": "python3 -B -m unittest tests.test_phase_adjoint tests.test_residual_runner tests.test_block_attnres tests.test_residual_data tests.test_adjoint_contracts"
+  },
+  "remote": {
+    "torch": "2.12.1+cu130",
+    "python": "3.12.3",
+    "device": "cpu",
+    "tests": 34,
+    "seconds": 4.787,
+    "command": "python -B -m unittest tests.test_phase_adjoint tests.test_residual_runner",
+    "source_snapshot_verified_files": 42
+  },
+  "source_sha256": {
+    "lm/phase_adjoint.py": "519cb7ce0fcc657eac89c70d3c5a52456f15549f3dcbb1c70668a8a2847760e4",
+    "lm/block_attnres.py": "7c55ab53d6fdb6add56681ed9ab7f10bf1bdb68f3d01203bacf80178c2f7c58f",
+    "experiments/residual_lm_diagnostic.py": "a04b27946d6fa0e6c518080fddd99f4ddcf7b33d2778ac2984debfb9d2d8aced",
+    "experiments/prepare_residual_data.py": "5451b899086b9d313f339fe6b7eada57effb736bf3ba3d4c44a644396a56658a",
+    "tests/test_phase_adjoint.py": "b79d2cdbf954174a95b57ee69157a747d3ecd1fd6cca1aab7007569e84155d1e",
+    "tests/test_residual_runner.py": "b625a4a128c74f18444bfcae100c16826b38f9c089e619aa68b7ff4868c7205a"
+  },
+  "study_controller": {
+    "local_tests": 15,
+    "local_seconds": 0.019,
+    "scope": "All subprocesses mocked; finite LR selection, completed-stage identity, frozen tuning after primary start, live-child failure abort, lock/deadline/cache/numerical policy contracts. No model training.",
+    "source_sha256": {
+      "experiments/run_residual_study.py": "4d8aa667de48e1d5e52e8c6ce02a6fd48d411054e06520f444d8464540c4b8c7",
+      "tests/test_residual_study.py": "c1f643fe3f92f4379e3303939bf422bc24590dc36d6ff9fbd05d2049d56e8582"
+    },
+    "remote_tests": 15,
+    "remote_seconds": 0.055,
+    "independent_review": "Two original counterexamples now blocked; no additional launch blockers found at fixed SHA 4d8aa667de48e1d5e52e8c6ce02a6fd48d411054e06520f444d8464540c4b8c7"
+  }
+}

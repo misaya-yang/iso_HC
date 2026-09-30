@@ -1,0 +1,227 @@
+{
+  "scope": "Dataset/cache and raw-source identity verification, not data-quality or model-validation evidence",
+  "checks": {
+    "status_complete": true,
+    "pinned_official_revision": true,
+    "train_token_count": true,
+    "val_token_count": true,
+    "raw_shards_match_official_lfs_sha": true,
+    "gpt2_vocabulary": true
+  },
+  "official_source_metadata": {
+    "source": "official Hugging Face API on the local host",
+    "revision": "87f09149ef4734204d70ed1d046ddc9ca3f2b8f9",
+    "metadata_url": "https://huggingface.co/api/datasets/HuggingFaceFW/fineweb-edu/tree/87f09149ef4734204d70ed1d046ddc9ca3f2b8f9/sample/10BT?recursive=false&expand=false",
+    "files": [
+      {
+        "path": "sample/10BT/000_00000.parquet",
+        "bytes": 2152819114,
+        "lfs_sha256": "b1ba7b2ce4cb5ea6ef42dca40263eabb85f37700d01693a68e9b30a31d78e871"
+      },
+      {
+        "path": "sample/10BT/001_00000.parquet",
+        "bytes": 2152222432,
+        "lfs_sha256": "3fcf2dc69cd52503986276d3d2d26a8c356d0f2ea28a0de4fdbda8cf87755693"
+      },
+      {
+        "path": "sample/10BT/002_00000.parquet",
+        "bytes": 2151796315,
+        "lfs_sha256": "547ae182d132c9f06b6ce63149567208ea9f57630bfd9b1a2938e504f0c9ebd7"
+      },
+      {
+        "path": "sample/10BT/003_00000.parquet",
+        "bytes": 2152437524,
+        "lfs_sha256": "22184e6eb25759ddd97783751ffc73e1705dfa2542e630dae1f2a8bac8ee6ddb"
+      },
+      {
+        "path": "sample/10BT/004_00000.parquet",
+        "bytes": 2152338550,
+        "lfs_sha256": "33557ddd87a07a4ae6fcaf7a4789c7b484e5cc0c273ca12a65b74200e6d8748b"
+      },
+      {
+        "path": "sample/10BT/005_00000.parquet",
+        "bytes": 2152189947,
+        "lfs_sha256": "e08d79927ecb377786572cd854817c748ceb8880878b1a0eb91abf8c85d505ea"
+      },
+      {
+        "path": "sample/10BT/006_00000.parquet",
+        "bytes": 2152689867,
+        "lfs_sha256": "554fa2613c9261d6c9c396caab881de3160175794c6c3e1856bf28a0e9cb9b76"
+      },
+      {
+        "path": "sample/10BT/007_00000.parquet",
+        "bytes": 2150686637,
+        "lfs_sha256": "4b7d1f697d4afff7f5f65cb7aa4d83acc6db716da4d46ea23399d0c50608c6e3"
+      },
+      {
+        "path": "sample/10BT/008_00000.parquet",
+        "bytes": 2151274846,
+        "lfs_sha256": "a6d9dcc0c72ecd7c7f0173c2d06b3a4249a2ccaa94961469d1a522ca689bbf1a"
+      },
+      {
+        "path": "sample/10BT/009_00000.parquet",
+        "bytes": 2151913277,
+        "lfs_sha256": "f836cd3c70b95776699eb6c356b2dbf702816e25dcf39992f5c80a29029d23c3"
+      },
+      {
+        "path": "sample/10BT/010_00000.parquet",
+        "bytes": 2152798864,
+        "lfs_sha256": "e5a2eae25f057f0856a10bfae314c6ca8ea8bb08456d2131e9e89b2b8305e2f6"
+      },
+      {
+        "path": "sample/10BT/011_00000.parquet",
+        "bytes": 2152323681,
+        "lfs_sha256": "db71cf0425bb3d1813a09f12ff1acd6dabdfb91a2e4f141960254ee5a7f036e7"
+      },
+      {
+        "path": "sample/10BT/012_00000.parquet",
+        "bytes": 2152069689,
+        "lfs_sha256": "08b47a3e1c25161f796d2f8dbf99ccf60affdebdcea4910833d0d5783315551f"
+      },
+      {
+        "path": "sample/10BT/013_00000.parquet",
+        "bytes": 540632672,
+        "lfs_sha256": "b393f51fefab26cd6f4c8f65707c1924f6666c4961a0ebebe04bb57f7ec832de"
+      }
+    ]
+  },
+  "completed_data_manifest": {
+    "status": "complete",
+    "created_at_utc": "2026-09-29T18:45:39.159941+00:00",
+    "dataset": "HuggingFaceFW/fineweb-edu",
+    "dataset_config": "sample/10BT",
+    "source_revision": "87f09149ef4734204d70ed1d046ddc9ca3f2b8f9",
+    "requested_source_revision": "87f09149ef4734204d70ed1d046ddc9ca3f2b8f9",
+    "transport_endpoint": "https://hf-mirror.com",
+    "preparation_script": {
+      "path": "/root/autodl-tmp/isoHC/r5/src/experiments/prepare_residual_data.py",
+      "sha256": "5451b899086b9d313f339fe6b7eada57effb736bf3ba3d4c44a644396a56658a"
+    },
+    "selected_source_files": [
+      "sample/10BT/000_00000.parquet",
+      "sample/10BT/001_00000.parquet",
+      "sample/10BT/002_00000.parquet",
+      "sample/10BT/003_00000.parquet",
+      "sample/10BT/004_00000.parquet",
+      "sample/10BT/005_00000.parquet",
+      "sample/10BT/006_00000.parquet",
+      "sample/10BT/007_00000.parquet",
+      "sample/10BT/008_00000.parquet",
+      "sample/10BT/009_00000.parquet",
+      "sample/10BT/010_00000.parquet",
+      "sample/10BT/011_00000.parquet",
+      "sample/10BT/012_00000.parquet",
+      "sample/10BT/013_00000.parquet"
+    ],
+    "consumed_source_files": [
+      {
+        "repository_path": "sample/10BT/000_00000.parquet",
+        "revision": "87f09149ef4734204d70ed1d046ddc9ca3f2b8f9",
+        "cached_path": "/root/autodl-tmp/isoHC/r5/data/fwe300m/raw_cache/datasets--HuggingFaceFW--fineweb-edu/blobs/b1ba7b2ce4cb5ea6ef42dca40263eabb85f37700d01693a68e9b30a31d78e871",
+        "sha256": "b1ba7b2ce4cb5ea6ef42dca40263eabb85f37700d01693a68e9b30a31d78e871",
+        "bytes": 2152819114,
+        "rows_available": 726000,
+        "rows_read": 294508
+      }
+    ],
+    "tokenizer": {
+      "package": "tiktoken",
+      "encoding": "gpt2",
+      "api": "encode_ordinary",
+      "vocab_size": 50257,
+      "eos_token_id": 50256
+    },
+    "split_rule": "big_endian_uint64(SHA256(exact_UTF8_document)[:8]) % 1000 < 10 => val; else train",
+    "duplicate_policy": "identical exact UTF-8 text stays in one split; within-split duplicates retained",
+    "target_tokens": {
+      "train": 300000000,
+      "val": 2000000
+    },
+    "actual_tokens": {
+      "train": 300000000,
+      "val": 2000000
+    },
+    "document_counts": {
+      "raw_documents_seen": 294508,
+      "raw_documents_by_split": {
+        "train": 291611,
+        "val": 2897
+      },
+      "documents_written": {
+        "train": 291611,
+        "val": 1944
+      },
+      "documents_skipped_full_split": {
+        "train": 0,
+        "val": 953
+      },
+      "tokens": {
+        "train": 300000000,
+        "val": 2000000
+      },
+      "eos_tokens_written": {
+        "train": 291610,
+        "val": 1943
+      },
+      "truncated_documents": [
+        {
+          "split": "val",
+          "document_sha256": "2a2fe9a172d7f4443a7b53c0c7955252ccc7f1cea2db726ffedf115c6982c43a",
+          "encoded_tokens_including_eos": 3881,
+          "written_tokens": 1313,
+          "eos_kept": false
+        },
+        {
+          "split": "train",
+          "document_sha256": "14be1eb854190ad8cc49a20f572d58194dd1f5beba7f9aa14d66fa1aa70f93a5",
+          "encoded_tokens_including_eos": 2098,
+          "written_tokens": 829,
+          "eos_kept": false
+        }
+      ]
+    },
+    "truncation_policy": "prefix of document tokens plus EOS; final truncated document may omit EOS",
+    "train_cache_path": "/root/autodl-tmp/isoHC/r5/data/fwe300m/train.pt",
+    "val_cache_path": "/root/autodl-tmp/isoHC/r5/data/fwe300m/val.pt",
+    "outputs": {
+      "train": {
+        "path": "/root/autodl-tmp/isoHC/r5/data/fwe300m/train.pt",
+        "tokens": 300000000,
+        "dtype": "torch.int32",
+        "shape": [
+          300000000
+        ],
+        "bytes": 1200001584,
+        "file_sha256": "6809819b1859267e1f91cac108ad702d26fc1b584cc1696b8652a2528bf9d5b2",
+        "token_sha256": "3833a28c351b4b6cc924e5154d7a18e791e5f4cd840c4a4ec7c7b7b823d53205",
+        "token_hash_encoding": "contiguous little-endian signed int32 token IDs"
+      },
+      "val": {
+        "path": "/root/autodl-tmp/isoHC/r5/data/fwe300m/val.pt",
+        "tokens": 2000000,
+        "dtype": "torch.int32",
+        "shape": [
+          2000000
+        ],
+        "bytes": 8001506,
+        "file_sha256": "f71373954e636d0ab8d003624556658cf19eb054f2f875ae84045017c28b0dc9",
+        "token_sha256": "24861194b606ef855cf5fffab3ebd44c8f183bc3d0ff3e21e7f1bc2c16f2b9da",
+        "token_hash_encoding": "contiguous little-endian signed int32 token IDs"
+      }
+    },
+    "packing": {
+      "performed": false,
+      "recommended_context_length": 512,
+      "instruction": "Runner must pack non-overlapping sequences within each split"
+    },
+    "raw_cache_policy": "retained under output-dir/raw_cache; never deleted by this script",
+    "package_versions": {
+      "huggingface-hub": "1.32.0",
+      "pyarrow": "25.0.1",
+      "tiktoken": "0.14.0",
+      "numpy": "2.4.6",
+      "torch": "2.12.1+cu130"
+    },
+    "python_version": "3.12.3 | packaged by Anaconda, Inc. | (main, May  6 2024, 19:46:43) [GCC 11.2.0]"
+  }
+}

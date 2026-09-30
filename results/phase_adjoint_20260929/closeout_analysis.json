@@ -1,0 +1,868 @@
+{
+  "analysis_source_sha256": "ca59426d36310dc1868280a8620c8246575d5572cd5228870cac879350e7f3c2",
+  "curves": [
+    {
+      "available": true,
+      "issues": [],
+      "lr": 0.0003,
+      "method": "baseline",
+      "path": "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr3e-4/baseline_seed419/train.jsonl",
+      "points": [
+        {
+          "clock_complete": true,
+          "cumulative_elapsed_seconds": 176.77554992958903,
+          "elapsed_this_invocation": 176.77554992958903,
+          "event": "periodic",
+          "invocation": 1,
+          "issues": [],
+          "line": 2049,
+          "nll": 5.41255550560314,
+          "quality_eligible": true,
+          "targets": 1999872,
+          "tokens": 33554432,
+          "update": 2048
+        },
+        {
+          "clock_complete": true,
+          "cumulative_elapsed_seconds": 181.8103763498366,
+          "elapsed_this_invocation": 181.8103763498366,
+          "event": "final",
+          "invocation": 1,
+          "issues": [],
+          "line": 2050,
+          "nll": 5.41255550560314,
+          "quality_eligible": true,
+          "targets": 1999872,
+          "tokens": 33554432,
+          "update": 2048
+        }
+      ],
+      "scope": "Within-run checkpoints, not independent seeds; repeated update evaluations remain separate events"
+    },
+    {
+      "available": true,
+      "issues": [],
+      "lr": 0.0006,
+      "method": "baseline",
+      "path": "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr6e-4/baseline_seed419/train.jsonl",
+      "points": [
+        {
+          "clock_complete": true,
+          "cumulative_elapsed_seconds": 176.04689733497798,
+          "elapsed_this_invocation": 176.04689733497798,
+          "event": "periodic",
+          "invocation": 1,
+          "issues": [],
+          "line": 2049,
+          "nll": 5.124124325792788,
+          "quality_eligible": true,
+          "targets": 1999872,
+          "tokens": 33554432,
+          "update": 2048
+        },
+        {
+          "clock_complete": true,
+          "cumulative_elapsed_seconds": 181.0489186262712,
+          "elapsed_this_invocation": 181.0489186262712,
+          "event": "final",
+          "invocation": 1,
+          "issues": [],
+          "line": 2050,
+          "nll": 5.124124325792788,
+          "quality_eligible": true,
+          "targets": 1999872,
+          "tokens": 33554432,
+          "update": 2048
+        }
+      ],
+      "scope": "Within-run checkpoints, not independent seeds; repeated update evaluations remain separate events"
+    },
+    {
+      "available": true,
+      "issues": [],
+      "lr": 0.0003,
+      "method": "gain",
+      "path": "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr3e-4/gain_seed419/train.jsonl",
+      "points": [
+        {
+          "clock_complete": true,
+          "cumulative_elapsed_seconds": 190.38521030545235,
+          "elapsed_this_invocation": 190.38521030545235,
+          "event": "periodic",
+          "invocation": 1,
+          "issues": [],
+          "line": 2049,
+          "nll": 5.387013468324864,
+          "quality_eligible": true,
+          "targets": 1999872,
+          "tokens": 33554432,
+          "update": 2048
+        },
+        {
+          "clock_complete": true,
+          "cumulative_elapsed_seconds": 195.8653537845239,
+          "elapsed_this_invocation": 195.8653537845239,
+          "event": "final",
+          "invocation": 1,
+          "issues": [],
+          "line": 2050,
+          "nll": 5.387013468324864,
+          "quality_eligible": true,
+          "targets": 1999872,
+          "tokens": 33554432,
+          "update": 2048
+        }
+      ],
+      "scope": "Within-run checkpoints, not independent seeds; repeated update evaluations remain separate events"
+    },
+    {
+      "available": true,
+      "issues": [],
+      "lr": 0.0006,
+      "method": "gain",
+      "path": "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr6e-4/gain_seed419/train.jsonl",
+      "points": [
+        {
+          "clock_complete": true,
+          "cumulative_elapsed_seconds": 190.51879765372723,
+          "elapsed_this_invocation": 190.51879765372723,
+          "event": "periodic",
+          "invocation": 1,
+          "issues": [],
+          "line": 2049,
+          "nll": 5.0657481697969295,
+          "quality_eligible": true,
+          "targets": 1999872,
+          "tokens": 33554432,
+          "update": 2048
+        },
+        {
+          "clock_complete": true,
+          "cumulative_elapsed_seconds": 195.97817363403738,
+          "elapsed_this_invocation": 195.97817363403738,
+          "event": "final",
+          "invocation": 1,
+          "issues": [],
+          "line": 2050,
+          "nll": 5.0657481697969295,
+          "quality_eligible": true,
+          "targets": 1999872,
+          "tokens": 33554432,
+          "update": 2048
+        }
+      ],
+      "scope": "Within-run checkpoints, not independent seeds; repeated update evaluations remain separate events"
+    },
+    {
+      "available": true,
+      "issues": [],
+      "lr": 0.0003,
+      "method": "phase-adjoint",
+      "path": "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr3e-4/phase-adjoint_seed419/train.jsonl",
+      "points": [
+        {
+          "clock_complete": true,
+          "cumulative_elapsed_seconds": 225.5870957216248,
+          "elapsed_this_invocation": 225.5870957216248,
+          "event": "periodic",
+          "invocation": 1,
+          "issues": [],
+          "line": 2049,
+          "nll": 5.391525175287,
+          "quality_eligible": true,
+          "targets": 1999872,
+          "tokens": 33554432,
+          "update": 2048
+        },
+        {
+          "clock_complete": true,
+          "cumulative_elapsed_seconds": 231.96100783720613,
+          "elapsed_this_invocation": 231.96100783720613,
+          "event": "final",
+          "invocation": 1,
+          "issues": [],
+          "line": 2050,
+          "nll": 5.391525175287,
+          "quality_eligible": true,
+          "targets": 1999872,
+          "tokens": 33554432,
+          "update": 2048
+        }
+      ],
+      "scope": "Within-run checkpoints, not independent seeds; repeated update evaluations remain separate events"
+    },
+    {
+      "available": true,
+      "issues": [],
+      "lr": 0.0006,
+      "method": "phase-adjoint",
+      "path": "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr6e-4/phase-adjoint_seed419/train.jsonl",
+      "points": [
+        {
+          "clock_complete": true,
+          "cumulative_elapsed_seconds": 225.19283521268517,
+          "elapsed_this_invocation": 225.19283521268517,
+          "event": "periodic",
+          "invocation": 1,
+          "issues": [],
+          "line": 2049,
+          "nll": 5.086085623981888,
+          "quality_eligible": true,
+          "targets": 1999872,
+          "tokens": 33554432,
+          "update": 2048
+        },
+        {
+          "clock_complete": true,
+          "cumulative_elapsed_seconds": 231.68514179438353,
+          "elapsed_this_invocation": 231.68514179438353,
+          "event": "final",
+          "invocation": 1,
+          "issues": [],
+          "line": 2050,
+          "nll": 5.086085623981888,
+          "quality_eligible": true,
+          "targets": 1999872,
+          "tokens": 33554432,
+          "update": 2048
+        }
+      ],
+      "scope": "Within-run checkpoints, not independent seeds; repeated update evaluations remain separate events"
+    },
+    {
+      "available": true,
+      "issues": [],
+      "lr": 0.0003,
+      "method": "terminal-adjoint",
+      "path": "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr3e-4/terminal-adjoint_seed419/train.jsonl",
+      "points": [
+        {
+          "clock_complete": true,
+          "cumulative_elapsed_seconds": 226.21551868598908,
+          "elapsed_this_invocation": 226.21551868598908,
+          "event": "periodic",
+          "invocation": 1,
+          "issues": [],
+          "line": 2049,
+          "nll": 5.391317647845087,
+          "quality_eligible": true,
+          "targets": 1999872,
+          "tokens": 33554432,
+          "update": 2048
+        },
+        {
+          "clock_complete": true,
+          "cumulative_elapsed_seconds": 232.59525123238564,
+          "elapsed_this_invocation": 232.59525123238564,
+          "event": "final",
+          "invocation": 1,
+          "issues": [],
+          "line": 2050,
+          "nll": 5.391317647845087,
+          "quality_eligible": true,
+          "targets": 1999872,
+          "tokens": 33554432,
+          "update": 2048
+        }
+      ],
+      "scope": "Within-run checkpoints, not independent seeds; repeated update evaluations remain separate events"
+    },
+    {
+      "available": true,
+      "issues": [],
+      "lr": 0.0006,
+      "method": "terminal-adjoint",
+      "path": "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr6e-4/terminal-adjoint_seed419/train.jsonl",
+      "points": [],
+      "scope": "Within-run checkpoints, not independent seeds; repeated update evaluations remain separate events"
+    },
+    {
+      "available": false,
+      "issues": [
+        "Per-LR train.jsonl is missing"
+      ],
+      "lr": 0.0003,
+      "method": "boundary-skip",
+      "path": "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr3e-4/boundary-skip_seed419/train.jsonl",
+      "points": []
+    },
+    {
+      "available": false,
+      "issues": [
+        "Per-LR train.jsonl is missing"
+      ],
+      "lr": 0.0006,
+      "method": "boundary-skip",
+      "path": "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr6e-4/boundary-skip_seed419/train.jsonl",
+      "points": []
+    },
+    {
+      "available": false,
+      "issues": [
+        "Per-LR train.jsonl is missing"
+      ],
+      "lr": 0.0003,
+      "method": "phase-adjoint-post-frozen",
+      "path": "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr3e-4/phase-adjoint-post-frozen_seed419/train.jsonl",
+      "points": []
+    },
+    {
+      "available": false,
+      "issues": [
+        "Per-LR train.jsonl is missing"
+      ],
+      "lr": 0.0006,
+      "method": "phase-adjoint-post-frozen",
+      "path": "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr6e-4/phase-adjoint-post-frozen_seed419/train.jsonl",
+      "points": []
+    },
+    {
+      "available": false,
+      "issues": [
+        "Per-LR train.jsonl is missing"
+      ],
+      "lr": 0.0003,
+      "method": "block-attnres",
+      "path": "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr3e-4/block-attnres_seed419/train.jsonl",
+      "points": []
+    },
+    {
+      "available": false,
+      "issues": [
+        "Per-LR train.jsonl is missing"
+      ],
+      "lr": 0.0006,
+      "method": "block-attnres",
+      "path": "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr6e-4/block-attnres_seed419/train.jsonl",
+      "points": []
+    }
+  ],
+  "development_priority_threshold_nats": 0.02,
+  "driver_status": "partial",
+  "fixed_training_tokens": 268435456,
+  "fixed_validation_targets": 1999872,
+  "format_version": 1,
+  "input_snapshot_scope": "Each file read once; a live directory is not a transaction",
+  "inputs_sha256": {
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr3e-4/baseline_seed419/train.jsonl": "a981393b7c1f9edb0e5b887274a43f562cb92ab7e3afa7085daf448e5c708b40",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr3e-4/gain_seed419/train.jsonl": "e35d64f6b7e84af6af124ff1a192c4de6a2b555617d71b8ef4e496da0f031ba5",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr3e-4/phase-adjoint_seed419/train.jsonl": "0ad4efca4ba5441b9de7e8ce113ca2ee418e1053d5e786337b6c1907887ff147",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr3e-4/terminal-adjoint_seed419/train.jsonl": "d8f643b27b7b5d3c14762cadfd9443d630f6e2596a96df0b2d64df4208f7e13e",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr6e-4/baseline_seed419/train.jsonl": "70785bbec46c5fad4d6b7aa2d879bb07c718f5c35c34cabb0b89133e434fc229",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr6e-4/gain_seed419/train.jsonl": "e8b782dc0b5141efa087c0101dd6bc0f73763a1223bff37fdb3cb254d9e09158",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr6e-4/phase-adjoint_seed419/train.jsonl": "9dfaf874a76c77bfaffc385d737ac36560ca415faf0c38d25f4227ff07d49d27",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/lr6e-4/terminal-adjoint_seed419/train.jsonl": "725b59d7027d0d7b5277573f179e456048f3228cfe5158f2f40f6c5fffee7eae",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/plan.json": "54e3c5123ff7f7d98b8915cf240cadd0a907ea9abab300ef76e5ce80f386840c",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/pilot_baseline_3e-4.json": "5f74527dadf828286cb51fc468d8fb6bbe02603ea68c40f2781a8a5dfab7b811",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/pilot_baseline_6e-4.json": "43023c414fd6237736812f65782cdef45c3091a9204f231c23a29eaae93ee91b",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/pilot_gain_3e-4.json": "712e998d50b91a7a096701b40ede3264bcbbf45bd14970fbf51551646220df55",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/pilot_gain_6e-4.json": "cae2a465d4e6a0825e7eae689daee0af76e17169a3f3f63d4bb7cd3d7714ebbe",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/pilot_phase-adjoint_3e-4.json": "bd9265df80c207b6484b61bde6cd38ac0661cad2f7d5b20a574634415e811060",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/pilot_phase-adjoint_6e-4.json": "f9e9ba5a4d52deeb561812f9a5684a7c96ef1dfe03d4cb8d0df45516bc6f9290",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/pilot_terminal-adjoint_3e-4.json": "d66a0256572b5249abf0330341ddc2373d943afe3f70247bd0b5c468afaacdcf",
+    "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/status.json": "27bc549643e963b41f6056f8fdbfa6bc1aeb16508fff16ad0dbaa9696b9747f8"
+  },
+  "issues": [
+    "selection.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/selection.json'",
+    "Selection is missing or inconsistent with status/locked plan"
+  ],
+  "main_arms": [
+    {
+      "classification": "unfinished",
+      "driver_status": "missing",
+      "eligible": false,
+      "final_checkpoint_nll": null,
+      "issues": [
+        "primary_baseline.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/primary_baseline.json'",
+        "Driver stage is missing, not completed",
+        "Successful verified two-LR selection is required for grid comparison"
+      ],
+      "lr": null,
+      "method": "baseline",
+      "observed_final_checkpoint_nll": null,
+      "quality_signature": null,
+      "stage_id": "primary_baseline",
+      "tokens": null,
+      "update": null
+    },
+    {
+      "classification": "unfinished",
+      "driver_status": "missing",
+      "eligible": false,
+      "final_checkpoint_nll": null,
+      "issues": [
+        "primary_gain.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/primary_gain.json'",
+        "Driver stage is missing, not completed",
+        "Successful verified two-LR selection is required for grid comparison"
+      ],
+      "lr": null,
+      "method": "gain",
+      "observed_final_checkpoint_nll": null,
+      "quality_signature": null,
+      "stage_id": "primary_gain",
+      "tokens": null,
+      "update": null
+    },
+    {
+      "classification": "unfinished",
+      "driver_status": "missing",
+      "eligible": false,
+      "final_checkpoint_nll": null,
+      "issues": [
+        "primary_phase-adjoint.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/primary_phase-adjoint.json'",
+        "Driver stage is missing, not completed",
+        "Successful verified two-LR selection is required for grid comparison"
+      ],
+      "lr": null,
+      "method": "phase-adjoint",
+      "observed_final_checkpoint_nll": null,
+      "quality_signature": null,
+      "stage_id": "primary_phase-adjoint",
+      "tokens": null,
+      "update": null
+    },
+    {
+      "classification": "unfinished",
+      "driver_status": "missing",
+      "eligible": false,
+      "final_checkpoint_nll": null,
+      "issues": [
+        "primary_terminal-adjoint.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/primary_terminal-adjoint.json'",
+        "Driver stage is missing, not completed",
+        "Successful verified two-LR selection is required for grid comparison"
+      ],
+      "lr": null,
+      "method": "terminal-adjoint",
+      "observed_final_checkpoint_nll": null,
+      "quality_signature": null,
+      "stage_id": "primary_terminal-adjoint",
+      "tokens": null,
+      "update": null
+    },
+    {
+      "classification": "unfinished",
+      "driver_status": "missing",
+      "eligible": false,
+      "final_checkpoint_nll": null,
+      "issues": [
+        "primary_boundary-skip.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/primary_boundary-skip.json'",
+        "Driver stage is missing, not completed",
+        "Successful verified two-LR selection is required for grid comparison"
+      ],
+      "lr": null,
+      "method": "boundary-skip",
+      "observed_final_checkpoint_nll": null,
+      "quality_signature": null,
+      "stage_id": "primary_boundary-skip",
+      "tokens": null,
+      "update": null
+    },
+    {
+      "classification": "unfinished",
+      "driver_status": "missing",
+      "eligible": false,
+      "final_checkpoint_nll": null,
+      "issues": [
+        "primary_phase-adjoint-post-frozen.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/primary_phase-adjoint-post-frozen.json'",
+        "Driver stage is missing, not completed",
+        "Successful verified two-LR selection is required for grid comparison"
+      ],
+      "lr": null,
+      "method": "phase-adjoint-post-frozen",
+      "observed_final_checkpoint_nll": null,
+      "quality_signature": null,
+      "stage_id": "primary_phase-adjoint-post-frozen",
+      "tokens": null,
+      "update": null
+    },
+    {
+      "classification": "unfinished",
+      "driver_status": "missing",
+      "eligible": false,
+      "final_checkpoint_nll": null,
+      "issues": [
+        "primary_block-attnres.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/primary_block-attnres.json'",
+        "Driver stage is missing, not completed",
+        "Successful verified two-LR selection is required for grid comparison"
+      ],
+      "lr": null,
+      "method": "block-attnres",
+      "observed_final_checkpoint_nll": null,
+      "quality_signature": null,
+      "stage_id": "primary_block-attnres",
+      "tokens": null,
+      "update": null
+    }
+  ],
+  "main_comparisons": [],
+  "main_grid_complete": false,
+  "phase_lr_matched_controls": [
+    {
+      "control": "boundary-skip",
+      "eligible": false,
+      "record": {
+        "classification": "unfinished",
+        "driver_status": "missing",
+        "eligible": false,
+        "final_checkpoint_nll": null,
+        "issues": [
+          "primary_boundary-skip.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/primary_boundary-skip.json'",
+          "Driver stage is missing, not completed",
+          "Successful verified two-LR selection is required for grid comparison"
+        ],
+        "lr": null,
+        "method": "boundary-skip",
+        "observed_final_checkpoint_nll": null,
+        "quality_signature": null,
+        "stage_id": "primary_boundary-skip",
+        "tokens": null,
+        "update": null
+      },
+      "scope": "Phase LR and D must both match; grid-selected LR mismatches cannot identify mechanism"
+    },
+    {
+      "control": "phase-adjoint-post-frozen",
+      "eligible": false,
+      "record": {
+        "classification": "unfinished",
+        "driver_status": "missing",
+        "eligible": false,
+        "final_checkpoint_nll": null,
+        "issues": [
+          "primary_phase-adjoint-post-frozen.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/primary_phase-adjoint-post-frozen.json'",
+          "Driver stage is missing, not completed",
+          "Successful verified two-LR selection is required for grid comparison"
+        ],
+        "lr": null,
+        "method": "phase-adjoint-post-frozen",
+        "observed_final_checkpoint_nll": null,
+        "quality_signature": null,
+        "stage_id": "primary_phase-adjoint-post-frozen",
+        "tokens": null,
+        "update": null
+      },
+      "scope": "Phase LR and D must both match; grid-selected LR mismatches cannot identify mechanism"
+    }
+  ],
+  "pilots": [
+    {
+      "classification": "completed",
+      "driver_status": "completed",
+      "eligible": true,
+      "final_checkpoint_nll": 5.41255550560314,
+      "issues": [],
+      "lr": 0.0003,
+      "method": "baseline",
+      "observed_final_checkpoint_nll": 5.41255550560314,
+      "quality_signature": "8a527bde968eb1ca8773dabc3b56bd547a46df4be48dc95ece1e51c3c7f025dc",
+      "stage_id": "pilot_baseline_3e-4",
+      "tokens": 33554432,
+      "update": 2048
+    },
+    {
+      "classification": "completed",
+      "driver_status": "completed",
+      "eligible": true,
+      "final_checkpoint_nll": 5.124124325792788,
+      "issues": [],
+      "lr": 0.0006,
+      "method": "baseline",
+      "observed_final_checkpoint_nll": 5.124124325792788,
+      "quality_signature": "8a527bde968eb1ca8773dabc3b56bd547a46df4be48dc95ece1e51c3c7f025dc",
+      "stage_id": "pilot_baseline_6e-4",
+      "tokens": 33554432,
+      "update": 2048
+    },
+    {
+      "classification": "completed",
+      "driver_status": "completed",
+      "eligible": true,
+      "final_checkpoint_nll": 5.387013468324864,
+      "issues": [],
+      "lr": 0.0003,
+      "method": "gain",
+      "observed_final_checkpoint_nll": 5.387013468324864,
+      "quality_signature": "8a527bde968eb1ca8773dabc3b56bd547a46df4be48dc95ece1e51c3c7f025dc",
+      "stage_id": "pilot_gain_3e-4",
+      "tokens": 33554432,
+      "update": 2048
+    },
+    {
+      "classification": "completed",
+      "driver_status": "completed",
+      "eligible": true,
+      "final_checkpoint_nll": 5.0657481697969295,
+      "issues": [],
+      "lr": 0.0006,
+      "method": "gain",
+      "observed_final_checkpoint_nll": 5.0657481697969295,
+      "quality_signature": "8a527bde968eb1ca8773dabc3b56bd547a46df4be48dc95ece1e51c3c7f025dc",
+      "stage_id": "pilot_gain_6e-4",
+      "tokens": 33554432,
+      "update": 2048
+    },
+    {
+      "classification": "completed",
+      "driver_status": "completed",
+      "eligible": true,
+      "final_checkpoint_nll": 5.391525175287,
+      "issues": [],
+      "lr": 0.0003,
+      "method": "phase-adjoint",
+      "observed_final_checkpoint_nll": 5.391525175287,
+      "quality_signature": "8a527bde968eb1ca8773dabc3b56bd547a46df4be48dc95ece1e51c3c7f025dc",
+      "stage_id": "pilot_phase-adjoint_3e-4",
+      "tokens": 33554432,
+      "update": 2048
+    },
+    {
+      "classification": "completed",
+      "driver_status": "completed",
+      "eligible": true,
+      "final_checkpoint_nll": 5.086085623981888,
+      "issues": [],
+      "lr": 0.0006,
+      "method": "phase-adjoint",
+      "observed_final_checkpoint_nll": 5.086085623981888,
+      "quality_signature": "8a527bde968eb1ca8773dabc3b56bd547a46df4be48dc95ece1e51c3c7f025dc",
+      "stage_id": "pilot_phase-adjoint_6e-4",
+      "tokens": 33554432,
+      "update": 2048
+    },
+    {
+      "classification": "completed",
+      "driver_status": "completed",
+      "eligible": true,
+      "final_checkpoint_nll": 5.391317647845087,
+      "issues": [],
+      "lr": 0.0003,
+      "method": "terminal-adjoint",
+      "observed_final_checkpoint_nll": 5.391317647845087,
+      "quality_signature": "8a527bde968eb1ca8773dabc3b56bd547a46df4be48dc95ece1e51c3c7f025dc",
+      "stage_id": "pilot_terminal-adjoint_3e-4",
+      "tokens": 33554432,
+      "update": 2048
+    },
+    {
+      "classification": "ineligible",
+      "driver_status": "interrupted",
+      "eligible": false,
+      "final_checkpoint_nll": null,
+      "issues": [
+        "pilot_terminal-adjoint_6e-4.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/pilot_terminal-adjoint_6e-4.json'",
+        "Driver stage is interrupted, not completed"
+      ],
+      "lr": 0.0006,
+      "method": "terminal-adjoint",
+      "observed_final_checkpoint_nll": null,
+      "quality_signature": null,
+      "stage_id": "pilot_terminal-adjoint_6e-4",
+      "tokens": null,
+      "update": null
+    },
+    {
+      "classification": "unfinished",
+      "driver_status": "missing",
+      "eligible": false,
+      "final_checkpoint_nll": null,
+      "issues": [
+        "pilot_boundary-skip_3e-4.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/pilot_boundary-skip_3e-4.json'",
+        "Driver stage is missing, not completed"
+      ],
+      "lr": 0.0003,
+      "method": "boundary-skip",
+      "observed_final_checkpoint_nll": null,
+      "quality_signature": null,
+      "stage_id": "pilot_boundary-skip_3e-4",
+      "tokens": null,
+      "update": null
+    },
+    {
+      "classification": "unfinished",
+      "driver_status": "missing",
+      "eligible": false,
+      "final_checkpoint_nll": null,
+      "issues": [
+        "pilot_boundary-skip_6e-4.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/pilot_boundary-skip_6e-4.json'",
+        "Driver stage is missing, not completed"
+      ],
+      "lr": 0.0006,
+      "method": "boundary-skip",
+      "observed_final_checkpoint_nll": null,
+      "quality_signature": null,
+      "stage_id": "pilot_boundary-skip_6e-4",
+      "tokens": null,
+      "update": null
+    },
+    {
+      "classification": "unfinished",
+      "driver_status": "missing",
+      "eligible": false,
+      "final_checkpoint_nll": null,
+      "issues": [
+        "pilot_phase-adjoint-post-frozen_3e-4.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/pilot_phase-adjoint-post-frozen_3e-4.json'",
+        "Driver stage is missing, not completed"
+      ],
+      "lr": 0.0003,
+      "method": "phase-adjoint-post-frozen",
+      "observed_final_checkpoint_nll": null,
+      "quality_signature": null,
+      "stage_id": "pilot_phase-adjoint-post-frozen_3e-4",
+      "tokens": null,
+      "update": null
+    },
+    {
+      "classification": "unfinished",
+      "driver_status": "missing",
+      "eligible": false,
+      "final_checkpoint_nll": null,
+      "issues": [
+        "pilot_phase-adjoint-post-frozen_6e-4.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/pilot_phase-adjoint-post-frozen_6e-4.json'",
+        "Driver stage is missing, not completed"
+      ],
+      "lr": 0.0006,
+      "method": "phase-adjoint-post-frozen",
+      "observed_final_checkpoint_nll": null,
+      "quality_signature": null,
+      "stage_id": "pilot_phase-adjoint-post-frozen_6e-4",
+      "tokens": null,
+      "update": null
+    },
+    {
+      "classification": "unfinished",
+      "driver_status": "missing",
+      "eligible": false,
+      "final_checkpoint_nll": null,
+      "issues": [
+        "pilot_block-attnres_3e-4.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/pilot_block-attnres_3e-4.json'",
+        "Driver stage is missing, not completed"
+      ],
+      "lr": 0.0003,
+      "method": "block-attnres",
+      "observed_final_checkpoint_nll": null,
+      "quality_signature": null,
+      "stage_id": "pilot_block-attnres_3e-4",
+      "tokens": null,
+      "update": null
+    },
+    {
+      "classification": "unfinished",
+      "driver_status": "missing",
+      "eligible": false,
+      "final_checkpoint_nll": null,
+      "issues": [
+        "pilot_block-attnres_6e-4.json: FileNotFoundError: [Errno 2] No such file or directory: '/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot/records/pilot_block-attnres_6e-4.json'",
+        "Driver stage is missing, not completed"
+      ],
+      "lr": 0.0006,
+      "method": "block-attnres",
+      "observed_final_checkpoint_nll": null,
+      "quality_signature": null,
+      "stage_id": "pilot_block-attnres_6e-4",
+      "tokens": null,
+      "update": null
+    }
+  ],
+  "plan_issues": [],
+  "plan_sha256": "a900a4e85592c876097ef29f38d11069a98cc44e2b7dcb0c02619d99f2f5df22",
+  "scope": "Single development seed 419; grid-selected final checkpoint NLL at fixed D. No SOTA, equivalence, significance or mature-quality claim. Curves are not independent replicates.",
+  "status": "partial",
+  "study_root": "/Users/yang/projects/isoHC/results/phase_adjoint_20260929/pilot_snapshot",
+  "tuning": {
+    "baseline": {
+      "both_lr_pilots_successful": true,
+      "candidate_records_match": false,
+      "eligible": false,
+      "recomputed_optimum_lr": 0.0006,
+      "selected_lr": null
+    },
+    "block-attnres": {
+      "both_lr_pilots_successful": false,
+      "candidate_records_match": false,
+      "eligible": false,
+      "recomputed_optimum_lr": null,
+      "selected_lr": null
+    },
+    "boundary-skip": {
+      "both_lr_pilots_successful": false,
+      "candidate_records_match": false,
+      "eligible": false,
+      "recomputed_optimum_lr": null,
+      "selected_lr": null
+    },
+    "gain": {
+      "both_lr_pilots_successful": true,
+      "candidate_records_match": false,
+      "eligible": false,
+      "recomputed_optimum_lr": 0.0006,
+      "selected_lr": null
+    },
+    "phase-adjoint": {
+      "both_lr_pilots_successful": true,
+      "candidate_records_match": false,
+      "eligible": false,
+      "recomputed_optimum_lr": 0.0006,
+      "selected_lr": null
+    },
+    "phase-adjoint-post-frozen": {
+      "both_lr_pilots_successful": false,
+      "candidate_records_match": false,
+      "eligible": false,
+      "recomputed_optimum_lr": null,
+      "selected_lr": null
+    },
+    "terminal-adjoint": {
+      "both_lr_pilots_successful": false,
+      "candidate_records_match": false,
+      "eligible": false,
+      "recomputed_optimum_lr": null,
+      "selected_lr": null
+    }
+  },
+  "wall_ledger": {
+    "issues": [],
+    "matched_continuation_child_wall_seconds": 0,
+    "measurement_complete": false,
+    "primary_continuation_child_wall_seconds": 0,
+    "runner_selected_trajectory_active_clock": {},
+    "scope": "Recorded child monotonic wall includes imports/setup/train/eval/save/exit and retries. Profiles, data preparation and inter-stage gaps are excluded. Running/incomplete clocks are lower bounds. Tuning and selected-trajectory views overlap; total counts each stage once.",
+    "selected_pilot_overlap_seconds": 0,
+    "selected_trajectory_child_wall": {},
+    "stage_costs": {
+      "pilot_baseline_3e-4": {
+        "measurement_complete": true,
+        "seconds": 184.60532315261662
+      },
+      "pilot_baseline_6e-4": {
+        "measurement_complete": true,
+        "seconds": 183.64555226732045
+      },
+      "pilot_gain_3e-4": {
+        "measurement_complete": true,
+        "seconds": 198.49591716378927
+      },
+      "pilot_gain_6e-4": {
+        "measurement_complete": true,
+        "seconds": 198.69173436891288
+      },
+      "pilot_phase-adjoint_3e-4": {
+        "measurement_complete": true,
+        "seconds": 234.7703809859231
+      },
+      "pilot_phase-adjoint_6e-4": {
+        "measurement_complete": true,
+        "seconds": 234.43820021674037
+      },
+      "pilot_terminal-adjoint_3e-4": {
+        "measurement_complete": true,
+        "seconds": 235.5937198502943
+      },
+      "pilot_terminal-adjoint_6e-4": {
+        "measurement_complete": false,
+        "seconds": 144.30267867352813
+      }
+    },
+    "total_child_wall_seconds": 1614.5435066791251,
+    "tuning_child_wall_seconds": 1614.5435066791251
+  }
+}

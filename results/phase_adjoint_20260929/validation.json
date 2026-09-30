@@ -1,0 +1,31 @@
+{
+  "recorded_at_utc": "2026-09-29T18:54:01.126277+00:00",
+  "scope": "Forced CPU contracts including tiny synthetic NTP optimization, source topology, cache identity, exact resume and cumulative timing; not natural-language quality or GPU",
+  "torch": "2.8.0",
+  "tests_run": 72,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "seconds": 3.328968125,
+  "patterns": [
+    "test_phase_adjoint.py",
+    "test_block_attnres.py",
+    "test_residual_runner.py",
+    "test_residual_data.py",
+    "test_adjoint_contracts.py"
+  ],
+  "source_sha256": {
+    "lm/phase_adjoint.py": "0ce868d71090eff5e791e2c581e2960a959d7e4c7a1eac0931b3eb40d66b936e",
+    "lm/block_attnres.py": "7c55ab53d6fdb6add56681ed9ab7f10bf1bdb68f3d01203bacf80178c2f7c58f",
+    "lm/adjoint.py": "b8baa5f1820256721e2c4029d87c59fdb621991e08f612fa42f461f707ba08c0",
+    "lm/models.py": "2860d38c1a1a86541b049c8272a7531c5cf8ae1d81adadc31a0d17a727a79597",
+    "experiments/residual_lm_diagnostic.py": "2d44913e24b118aa540a21a18a4eba3b094556e98c29d2ee27758a594c6c3314",
+    "experiments/prepare_residual_data.py": "5451b899086b9d313f339fe6b7eada57effb736bf3ba3d4c44a644396a56658a",
+    "experiments/verify_phase_initialization.py": "d82e25ea882066cee289b2996b76a377f053f6a6c556d88e2b48748ead890f0c",
+    "tests/test_phase_adjoint.py": "efc6f9f6fdfc294b1481ca077864a3d84de30575c31ebd80e1b1abe4a7a8eb11",
+    "tests/test_block_attnres.py": "5bb52299b4f40c75bcd6ebb3daff8dd3be999acd080329226ca7af8b26dd8878",
+    "tests/test_residual_runner.py": "9acd5d1ea0792474673613e0499beee966cf3fde541e8936035be455fda65ceb",
+    "tests/test_residual_data.py": "4cec2e81c95dee1722cf96e972dd451ffdddf6ab5ba5c0fb784ec6f9dab861e5",
+    "tests/test_adjoint_contracts.py": "e8af4e6a9cd424912e36d1281561b68df5aefaa067430826749322171c8f77b7"
+  }
+}

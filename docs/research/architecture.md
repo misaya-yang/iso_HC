@@ -1,6 +1,10 @@
-# 算法：伴随读写残差（adjoint-hc）
+# 算法研究资产：已关闭的 R5 与 R4 参考实现
 
-更新：2026-09-26，R4。**已实现完整Transformer模型与训练入口；当前处于数学合同、集成训练和成本验证阶段，尚无成熟LM性能或SOTA结论。** 主实现为 [lm/adjoint.py](../../lm/adjoint.py)。这是算法候选，不是重新启用RDM。
+状态：**R5 CLOSED，按用户要求本轮结项。** `phase-adjoint` 不再具有活动研究优先级；原续训、补齐对照与扩规模安排不再构成执行指令。本文保留全部算法合同、实现和强对照作为研究资产；实际结果与关机记录统一见 [R5 closeout 报告](reports/R5_CLOSEOUT_20260929.md)。
+
+关闭依据：在每臂33,554,432 tokens的已完成前缀中，gain在两个LR上均有更低持出NLL：3e-4为 `5.387013 < 5.391525`，6e-4为 `5.065748 < 5.086086`（gain < phase）。完整更新profile中phase比baseline慢约18%，gain接近baseline。terminal只完成3e-4前缀，与phase相差不超过0.000208 nat；6e-4轨迹中断，不能跨预算排序。268,435,456 tokens的完整诊断未完成，这些结果支持本轮停止优先推进，不构成成熟LM方法失败的结论。
+
+R4参考记录（2026-09-26）：**已实现完整Transformer模型与训练入口，并保留数学合同、tiny合成训练和CPU成本回执；尚无成熟LM性能或SOTA结论。** 主实现为 [lm/adjoint.py](../../lm/adjoint.py)。以下第1–7节保留R4合同，第8节保留已关闭的R5构造；待验证问题不自动触发新训练。RDM保持归档。
 
 ## 1. 一个操作：在哪里读，就沿同一单位方向写回
 
@@ -78,7 +82,7 @@ D是固定交替±1的对角符号矩阵，不训练、不增加参数。最终�
 
 | 方法ID | 实现区别 | 用途 |
 | --- | --- | --- |
-| `adjoint-hc` | 动态单位地址，同地址写回，signed carrier | 当前待测候选 |
+| `adjoint-hc` | 动态单位地址，同地址写回，signed carrier | R4参考候选与原训练资产 |
 | `adjoint-hc-static` | 只学习每层标量地址 | 判断token条件化是否必要 |
 | `adjoint-hc-frozen-aux` | 辅助流固定为Dx₀ | 判断收益是否只是输入长skip；此控制不满足完整伴随写回 |
 | `adjoint-hc-zero-carrier` | 辅助入口为零 | 对齐初始化死区的负控制 |
@@ -100,4 +104,59 @@ O(d)不等于没有开销：参考PyTorch实现增加kernel/中间张量，辅�
 
 可争取的贡献是：**以精确残差语义约束读写，消除可避免的错位剪切，并用可训练初始化把它变成一个足够便宜、有实际收益的实现。** 是否有独立贡献必须由最接近的自由读写/子空间对照及充分LM训练决定，不能靠局部定理单独获得SOTA资格。相关文献见 [literature.md](literature.md)。
 
-代码、合同测试与集成probe是本轮交付。下一决定依据真实结果，不能因为实现了算法就预设应继续扩规模。
+代码、合同测试与集成probe是R4交付。以下保留R5设计依据与强对照合同；本轮已关闭，实际决定见 [closeout](reports/R5_CLOSEOUT_20260929.md)。
+
+## 8. 已关闭的 R5 构造：一次深度交汇，打开真实历史的一阶学习路径
+
+R4 在精确 baseline 起点的历史核仍为二阶；输入 carrier 的梯度与有用历史学习不能混称。R5从零辅助流开始，在每个阶段内部保持同一个单位地址读取和写回：
+
+\[
+m_0=0,\quad c_\ell=(1,\tanh u_\ell)/\sqrt{1+\tanh^2u_\ell},\quad
+z=c_0h+c_1m,\quad \delta=F(\operatorname{Norm}(z)),\quad
+(h,m)^+=(h,m)+(c_0\delta,c_1\delta).
+\tag{P1}
+\]
+
+在预先确定的中间 Transformer block 入口只做一次
+
+\[
+\boxed{(h,m)\leftarrow(h+m,m-h).}
+\tag{P2}
+\]
+
+所有 router 为零时，边界前 (m=0)，边界 active 不变、辅助变成负的边界快照，之后的 active 与 baseline 按相同顺序更新。初始函数与共同主干梯度因此匹配 baseline。早期 router 的辅助写入却在边界被 active 读取，其一阶信号是实际 branch 创新与边界伴随的内积，而非 signed 输入载体。
+
+这一实现等价于全局坐标的互逆尺度同方向读写：读 \(c^TX/a\)，写 \(ac\delta\)，第一阶段 \(a=1\)，第二阶段 \(a=1/\sqrt2\)。它明确改变了 R4 的全深度单位系数合同。边界(P2)是一次固定的缩放旋转，奇异值为\(\sqrt2\)，不能宣称整个局部存储空间等距；阶段内固定地址的局部 Jacobian 合同仍成立。完整证明与“一次非共线切换”限制见 [theory §11](theory.md)。
+
+### 8.1 能新增的能力与最强替代解释
+
+新接口允许早期创新经第二流绕过若干后续分支，到一个深度交汇点影响后半网络；它同时允许阶段内使用不同视图。普通NTP直接训练，不保存所有层输出，不添加外部监督、槽位元数据或controller。
+
+但一个 gated boundary skip 已能产生相同的一阶梯度。更小的末端构造也可让全部body writer的一阶历史梯度打开。第二阶段的初始辅助值还包含边界长skip；第一个post分支的读扰动可能接近径向，被RMSNorm抑制。因此**“梯度打开”不能作为内部交汇或可更新记忆必要性的结论**。需要证明更早的历史读取及阶段内写回比这些替代多出的作用值得采用。
+
+### 8.2 方法与强对照的身份
+
+| 方法ID | 更新差异 | 能回答的问题 |
+| --- | --- | --- |
+| `phase-adjoint` | (P1)+(P2)，零辅助入口、动态单位地址 | 已关闭的R5诊断候选 |
+| `terminal-adjoint` | 相同零入口、body单位tied与output router；唯一(P2)在全部body之后 | 内部交汇是否必要；全部body writer在起点获得末端history梯度 |
+| `boundary-skip` | pre分支只读h，h按baseline更新；零门将δ累加到m；相同边界交汇；post读取固定边界carrier，不再写m | 相同一阶history信用分配是否已足够；排除delayed skip解释 |
+| `phase-adjoint-post-frozen` | pre与主方法相同，post禁止辅助写入 | 跨边界路径可训后，持续更新第二流是否必要 |
+| `phase-adjoint-frozen` | 全程禁止辅助写入，仍执行边界转换 | 初始化/入口负控制；pre路由死区，不能作主要强基线 |
+| `phase-adjoint-shear` | 同读取、同边界，写 (b=c+s(-c_1,c_0))，s零初始化 | 对齐约束是否值得；保持 (c^Tb=1)，明确属于自由写控制 |
+| `gain` | 单流 (h^+=h+[1+\tanh u(h)]\delta)，零路由初始化 | 非零一阶导数的强单流尺度控制 |
+| `block-attnres` | 每个目的子层的独立query、completed summaries与mutable partial、softmax读历史 | 相关强方法；参考执行程序不是原论文生产kernel或完整配方复现 |
+
+R4 `adjoint`/frozen/shear 另作为比较臂，原 `adjoint-hc` 训练工厂和历史结果不覆盖。full-frozen属于负控制，不靠它的死区制造胜负。所有控制中的快照保留对早层主干的正常梯度，不暗中detach。
+
+末端交汇必须在body循环结束后明确执行，不能只允许`boundary=L`却遗漏转换。terminal在非零路由后仍读取并更新辅助流，与纯weighted late skip仅初始一阶相同。最终router在零点主要产生径向扰动，可能被RMSNorm抑制；这不阻断body writer的history梯度，亦不保证所有新增参数都有强梯度。证明见 [theory §11.9](theory.md)。
+
+### 8.3 实现、成本与部署合同
+
+实现入口：[phase_adjoint.py](../../lm/phase_adjoint.py)、[Block AttnRes](../../lm/block_attnres.py)。统一诊断 runner：[residual_lm_diagnostic.py](../../experiments/residual_lm_diagnostic.py)。正式证据状态以 [evidence](evidence.md) 为准。
+
+主方法维持两条 `[B,T,d]` 流、每个branch一个scalar router、每个attention/MLP一次主干调用。边界额外读取两流并产生两条新状态，发生一次；每子层仍有归约、读写和反向中间量。router使用R4同一FP32地址构造，流 dtype 按模型/AMP实际行为记录。参考实现无条件索引、Sinkhorn/SVD、逆矩阵或自定义调度。
+
+不增加的只是 attention/MLP 调用次数；辅助流、router和训练保存/重算都有成本。原FP32参数+AMP路径的残差流可能仍为FP32，不能按BF16流估显存。尚无KV-cache实现，因此当前只有训练与prefill能实测，不能称全序列重复forward为decode benchmark。
+
+该构造属于一般HC的受限参数化，不是从函数类上超越HC。合同成立与新增机制值得采用是不同结论；本轮结果未支持继续优先投入phase，故实现、初始化证明和强对照全部保留为研究资产。共享query bank、EMA和多时间尺度保留为分析材料，不自动启动新主线。RDM不恢复。

@@ -3,7 +3,7 @@
   "audit_date": "2026-09-25",
   "audit_base_commit": "d4af4d6",
   "audit_base_branch": "main",
-  "scope": "Historical LM/GNN evidence, source audit, independent gauge/WD/transport checks, retired RDM primitives, and implemented adjoint residual with completed synthetic NTP integration training and local CPU costs. No new natural-language or GPU training; no SOTA evidence.",
+  "scope": "Historical evidence and preserved R4 synthetic training, plus R5 independent algebra, complete phase/control implementations, reproducible diagnostic runner and user-authorized data/remote preparation. GPU and natural-language results are separately registered when actually completed.",
   "status_definitions": {
     "local_raw_checked": "本轮读取并核对本地历史JSON/log；不是本轮训练复现",
     "local_code_checked": "核查当前源码；不自动证明历史运行身份",
@@ -1546,8 +1546,122 @@
         "lm/adjoint.py": "b8baa5f1820256721e2c4029d87c59fdb621991e08f612fa42f461f707ba08c0",
         "lm/models.py": "e4bad5a1ca3580e6b4bb0aa3164733009567f20b79a38c551b05efc75c6d0f97"
       }
+    },
+    {
+      "id": "E-R5-PHASE-CONTRACTS",
+      "status": "new_local_verification",
+      "claim": "Exact-baseline phase construction and first-order true-history path are verified; complete model, strong controls and reproducible runner are implemented. Contract tests include tiny synthetic NTP optimization, not mature LM quality.",
+      "source_paths": [
+        "lm/phase_adjoint.py",
+        "lm/block_attnres.py",
+        "experiments/verify_phase_initialization.py",
+        "experiments/residual_lm_diagnostic.py",
+        "experiments/prepare_residual_data.py",
+        "tests/test_phase_adjoint.py",
+        "tests/test_block_attnres.py",
+        "tests/test_residual_runner.py",
+        "tests/test_residual_data.py",
+        "results/phase_adjoint_20260929/algebra.json",
+        "results/phase_adjoint_20260929/validation.json",
+        "results/phase_adjoint_20260929/README.md",
+        "results/phase_adjoint_20260929/canonical_validation.json"
+      ],
+      "limits": [
+        "The fixed-source/local geometry contracts do not prove dynamic whole-network stability or LM quality.",
+        "The stage switch is a scaled rotation with singular values sqrt(2), not an isometry in stored coordinates.",
+        "Strong boundary skip matches the initial history gradient; full-frozen has dead pre-routes.",
+        "Firstness and quality-cost advantages are not established by these checks.",
+        "Terminal-only mixing also opens all body writer gradients; internal mixing necessity is not implied."
+      ]
+    },
+    {
+      "id": "E-R5-DATA-IDENTITY",
+      "status": "new_local_verification",
+      "claim": "Official pinned FineWeb-Edu cache preparation completed: 300M train and 2M validation GPT-2 tokens with exact-content document split. Consumed raw shard SHA matches official LFS metadata.",
+      "source_paths": [
+        "experiments/prepare_residual_data.py",
+        "results/phase_adjoint_20260929/data_identity.json"
+      ],
+      "limits": [
+        "Identity/provenance is not a scientific data-quality or model-performance validation.",
+        "Exact duplicates share a split; this does not assert no near-duplicate overlap.",
+        "The final truncated document in each split may omit EOS; actual truncations are in the manifest."
+      ]
+    },
+    {
+      "id": "E-R5-GPU-PROFILE",
+      "status": "new_gpu_engineering_measurement",
+      "claim": "26 optimizer-step profiles across 16 eager, 3 default-Inductor and 7 canonical-Inductor cases completed on the authorized GPU; 1,280 updates/20,971,520 NTP tokens including warmup. Weights discarded. Canonical seven-arm full-evaluation/save preflights and two real CUDA resumes pass.",
+      "source_paths": [
+        "experiments/residual_lm_diagnostic.py",
+        "results/phase_adjoint_20260929/gpu_profiles.json",
+        "results/phase_adjoint_20260929/remote_validation.json",
+        "results/phase_adjoint_20260929/README.md",
+        "results/phase_adjoint_20260929/gpu_preflight.json",
+        "results/phase_adjoint_20260929/canonical_gpu_preflight.json"
+      ],
+      "limits": [
+        "No quality ranking, mature LM result or original production AttnRes kernel measurement.",
+        "Warmup and steady intervals are distinct; steady peak excludes earlier warmup and eval/save peaks.",
+        "Actual sustained cost includes startup, evaluation, checkpoint and possible throughput variation.",
+        "Actual CUDA resumes verify checkpoint identity and continuation; they do not prove bitwise continuous/resumed trajectory equivalence."
+      ]
+    },
+    {
+      "id": "E-R5-REFERENCE-RANK",
+      "status": "new_local_verification",
+      "claim": "27 independent CPU float64 checks verify the positive-scale exact-reference-address rank characterization and counterexamples. Fresh orthogonal directions are necessary at each strict scale decrease, within the stated serialized initialization interface.",
+      "source_paths": [
+        "experiments/verify_phase_rank_contract.py",
+        "results/phase_adjoint_20260929/phase_rank.json",
+        "docs/research/theory.md"
+      ],
+      "limits": [
+        "Classical Gram decomposition specialized to the initialization interface, not a firstness claim.",
+        "Not an implemented or trained n3 LM, a dynamic model stability result, or a general HC memory lower bound.",
+        "Approximate kernels and parallel read-only outputs do not obey the exact serialized count bound."
+      ]
+    },
+    {
+      "id": "E-R5-CUDA-INIT",
+      "status": "new_gpu_numerical_verification",
+      "claim": "Four zero-update real CUDA numerical audits identify compiled no-grad evaluator drift. Raw eager init logits and corrected compiled training logits match baseline/phase; canonical raw eager evaluation and explicit casts/backward policy selected before quality pilots.",
+      "source_paths": [
+        "experiments/verify_cuda_initialization.py",
+        "results/phase_adjoint_20260929/cuda_initialization.json",
+        "experiments/residual_lm_diagnostic.py"
+      ],
+      "limits": [
+        "Zero optimizer updates; no post-update trajectory equivalence or LM-quality advantage.",
+        "Shared BF16 gradients are not bitwise equal; cross-model differences are at the native repeated-backward noise scale.",
+        "No full causal attribution of the prior default one-update validation difference."
+      ]
+    },
+    {
+      "id": "E-R5-STUDY",
+      "status": "user_stopped_single_seed_pilot",
+      "claim": "Seven valid2048-update FineWeb-Edu pilot endpoints completed; gain beats phase at both tested learning rates and costs less. Terminal6e-4 interrupted; no full268M-budget main arm or full seven-arm tuning completed. User stopped the round and the original GPU instance is verified off.",
+      "source_paths": [
+        "experiments/run_residual_study.py",
+        "tests/test_residual_study.py",
+        "results/phase_adjoint_20260929/study_plan.json",
+        "results/phase_adjoint_20260929/canonical_validation.json",
+        "docs/research/roadmap.md",
+        "results/phase_adjoint_20260929/diagnostic_summary.json",
+        "experiments/analyze_residual_study.py",
+        "results/phase_adjoint_20260929/closeout_analysis.json",
+        "results/phase_adjoint_20260929/closeout.json",
+        "results/phase_adjoint_20260929/pilot_snapshot/status.json",
+        "docs/research/reports/R5_CLOSEOUT_20260929.md"
+      ],
+      "limits": [
+        "Single development seed419 and33,554,432-token prefixes; no mature LM/SOTA/independent-seed conclusion.",
+        "Best-of-two values apply only to baseline/gain/phase with both pilots complete; seven-arm selection was never finalized.",
+        "No complete268,435,456-token main comparisons; missing and interrupted arms remain ineligible.",
+        "Stopped by explicit user decision; no automatic resume, expansion or further paid launch."
+      ]
     }
   ],
-  "research_decision_revision": "R4: adjoint-hc is implemented with exact-baseline initialization, live routing gradients and completed synthetic NTP integration training. No useful quality gain in this probe; CPU overhead measured at two shapes. RDM remains retired.",
-  "updated_date": "2026-09-26"
+  "research_decision_revision": "R5 closed by user request: no incremental quality-cost evidence beyond gain in measured pilots. Keep theory/code/results as assets; no active scaling candidate, no automatic restart. R4 reference, RDM archived.",
+  "updated_date": "2026-09-29"
 }

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-09-29T18:37:21.238193+00:00",
+  "scope": "CPU float64 fixed-source and nonlinear algebra; no model training, data download, GPU, or LM conclusion",
+  "torch_version": "2.8.0",
+  "seed": 931,
+  "shape": {
+    "branches": 6,
+    "width": 4,
+    "boundary": 3
+  },
+  "checks": {
+    "causal_initial_kernel_is_one": true,
+    "baseline_function_exact_in_frame": true,
+    "preboundary_history_kernel_first_derivative_is_one": true,
+    "aligned_tied_history_kernel_first_derivative_is_zero": true,
+    "real_innovation_gradient_matches_boundary_adjoint": true,
+    "coordinate_and_global_functions_agree": true,
+    "coordinate_and_global_route_gradients_agree": true,
+    "frozen_step_spectrum_matches_residual_plus_identity": true,
+    "boundary_is_scaled_rotation_not_isometry": true,
+    "boundary_reaches_prescribed_history_gain_norm_lower_bound": true,
+    "boundary_introduces_no_directional_conditioning": true,
+    "three_noncollinear_phases_break_baseline": true
+  },
+  "measurements": {
+    "initial_causal_kernel_max_error": 0.0,
+    "frame_baseline_output_max_error": 0.0,
+    "prewriter_kernel_derivative": 0.9999999999999998,
+    "aligned_tied_kernel_derivative": 0.0,
+    "prewriter_loss_gradients": [
+      -0.22615691907125662,
+      0.22384332233333637,
+      -0.5713236941030836
+    ],
+    "boundary_adjoint_gradient_max_error": 0.0,
+    "coordinate_output_max_error": 1.1102230246251565e-16,
+    "coordinate_route_gradient_max_error": 1.1102230246251565e-16,
+    "frozen_spectrum_max_error": 4.440892098500626e-16,
+    "boundary_singular_values": [
+      1.4142135623730954,
+      1.4142135623730947
+    ],
+    "boundary_fixed_history_gain": 0.7,
+    "boundary_norm_at_fixed_history_gain": 1.2206555615733703,
+    "boundary_condition_at_fixed_history_gain": 1.0,
+    "third_phase_second_source_coefficient": 2.220446049250313e-16
+  },
+  "conclusions_not_supported": [
+    "LM quality advantage",
+    "novelty",
+    "whole-network stability",
+    "GPU efficiency",
+    "arbitrary-depth selective retrieval"
+  ],
+  "source_sha256": "d82e25ea882066cee289b2996b76a377f053f6a6c556d88e2b48748ead890f0c"
+}

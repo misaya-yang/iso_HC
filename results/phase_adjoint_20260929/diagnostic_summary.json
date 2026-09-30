@@ -1,0 +1,11 @@
+{
+  "status": "user_stopped_and_gpu_off",
+  "observed_utc": "2026-09-29T23:51:00+00:00",
+  "completed_pilots": 7,
+  "interrupted_pilot": "terminal-adjoint_lr6e-4",
+  "full_budget_main_arms_completed": 0,
+  "closeout_receipt": "results/phase_adjoint_20260929/closeout.json",
+  "analysis": "results/phase_adjoint_20260929/closeout_analysis.json",
+  "report": "docs/research/reports/R5_CLOSEOUT_20260929.md",
+  "decision": "No phase-adjoint priority or further execution this round."
+}

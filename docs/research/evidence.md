@@ -1,8 +1,10 @@
 # 证据账本：已有结果、边界与缺口
 
-更新日期：2026-09-26，R4。审计起点：`main@d4af4d6`。本页替代旧综合报告的**当前研究判断**，保留旧报告和原始文件不变；逐项来源和状态见 [evidence_registry.json](evidence_registry.json)。
+更新日期：2026-09-29，R5。审计起点：`main@d4af4d6`。本页替代旧综合报告的**当前研究判断**，保留旧报告和原始文件不变；逐项来源和状态见 [evidence_registry.json](evidence_registry.json)。
 
 ## 1. 当前结论
+
+**R5当前状态：phase-adjoint已实现完整模型、同一阶history梯度的boundary-skip、post-frozen及shear控制，独立数学合同与可恢复runner检查通过。新数据与GPU执行按第11节单独登记；尚无主会新颖性或成熟LM优势。** R4原证据保持以下范围。
 
 **R4研究状态：`adjoint-hc` 已实现完整Transformer与训练入口，并完成四臂合成NTP集成训练；路由梯度和辅助写入已激活，当前没有有意义的质量收益证据。** 两个CPU形状的完整前向加反向耗时为baseline的1.417×与1.157×。精确结果和测量范围见第9节。RDM仍已撤销主线资格；旧slot原语验证不恢复其优先级。
 
@@ -228,4 +230,65 @@ IsoStream L16/L32 参数量分别 `159,552 / 225,344`；对应 GCN `157,696 / 22
 | 附件报告 CPU 等距交换无可检测收益 | 等距交换路线已被否定或已被证明 | 恢复原件，后续在目标任务规模测试预先定义效应 |
 | adjoint完整模型可训练、路由可激活、固定地址有精确残差语义 | adjoint具有LM收益、动态稳定性或质量—成本优势 | 强单流、同carrier自由读写、冻结辅助写入和faithful竞争方案的匹配比较 |
 
-下一阶段围绕已经实现的adjoint候选检验实际LM效果、自由读写限制的得失，以及真实GPU成本；完整顺序见 [roadmap.md](roadmap.md)。若冻结辅助流或强单流保留全部收益，优先简化而非继续增加控制器。RDM生命周期工作流不恢复。算法存在、数学性质成立、工程可用和论文贡献是四项不同结论，后续记录必须分别登记。
+下一阶段围绕R5 phase候选和强skip/post-frozen/shear/AttnRes比较检验真实LM效果及GPU成本；R4作为参考，完整顺序见 [roadmap.md](roadmap.md)。若冻结辅助流或强单流保留全部收益，优先简化而非继续增加控制器。RDM生命周期工作流不恢复。算法存在、数学性质成立、工程可用和论文贡献是四项不同结论，后续记录必须分别登记。
+
+## 11. E-R5-PHASE：理论合同、强对照与新执行入口
+
+来源：[phase实现](../../lm/phase_adjoint.py)、[Block AttnRes机制比较器](../../lm/block_attnres.py)、[独立代数脚本](../../experiments/verify_phase_initialization.py)、[回执入口](../../results/phase_adjoint_20260929/README.md)。这是9月29日的新工作，与旧R4及历史LM分开。
+
+独立CPU float64代数核验12/12通过：初始因果核/输出误差为0；跨cut早writer核导数为1而全对齐unit-tied为0；真实创新损失导数与边界伴随内积误差为0；坐标/全局输出与梯度误差不超过1.12e-16；局部谱误差4.45e-16。边界奇异值为sqrt(2)，给定history增益时达到行范数下界，但不是全程等距或整网稳定。
+
+本地72项合同/回归检查全部通过；完整模型测试包括初始logits逐位baseline一致、主干/embedding梯度匹配、早writer一阶NTP梯度、非零路由因果及样本隔离、半精度和强控制身份。boundary-skip与主方法初始早writer梯度相同，post-frozen初始梯度也匹配；full-frozen早router为零，所以仅作负控制。合同不能证明多流历史必要。 后续新增terminal出口对照及canonical数值策略后，本地78项检查通过（3.993秒），远端实际Torch的phase/runner 34项CPU检查通过（4.787秒），见 [canonical validation](../../results/phase_adjoint_20260929/canonical_validation.json)。terminal所有body writer梯度与最终伴随内积匹配，切换在body之后明确执行；没有用这些合同推断内部交汇必要。
+
+独立新runner使用固定非重叠block、有效target加权NLL、complete cache manifest、独立data RNG和全局update/LR schedule。CPU检查包括带dropout和累积的continuous/resume逐张量模型、optimizer、RNG和样本cursor一致，以及aot_eager恢复、全部method的一步NTP；这些实际包含微型合成优化，不能写为未训练，也不等于自然语言效果。
+
+用户授权的AutoDL无卡准备已完成，已上传依赖完整的Python快照并在真实远端Torch上做CPU检查。官方FineWeb-Edu revision固定为87f09149ef4734204d70ed1d046ddc9ca3f2b8f9。数据已完成train300M/validation2M GPT-2 tokens，按精确文档内容hash分流；完整manifest和官方LFS SHA核对见 [data identity](../../results/phase_adjoint_20260929/data_identity.json)。镜像传输问题不改变数据源或划分，下载身份核验不建立数据质量或算法效果。
+
+准备完成后已通过Chrome关机，第一次原主机带卡开机返回零空闲GPU。克隆准备没有创建新实例；用户进一步授权开机后，原主机已有空闲卡，原实例已带卡运行，价格1.58元/小时。已设置纽约时间9月30日03:45（UTC07:45）自动关机，UI预计剩余17.17元，首轮保守上限20元。当前执行状态见 [回执](../../results/phase_adjoint_20260929/README.md)。
+
+实际本地/远端测试、数据、GPU profile和训练状态以这一回执目录的对应JSON为准。模型、训练集成、数据身份、任务质量与质量—成本是独立层次；不能用其中一项升级其他层次。
+
+## 12. E-R5-GPU-PROFILE：完整优化步成本，尚非质量比较
+
+[GPU回执](../../results/phase_adjoint_20260929/gpu_profiles.json)记录真实RTX4080SUPER、约32GB显存、BF16 AMP上的16个独立进程eager profile。八臂均通过micro8×accum4及micro32×accum1；共同有效batch32、24L×256d、T512、V50257。前者测20步、预热5步，后者测50步、预热10步。含预热共680次真实FineWeb-Edu NTP更新、11,141,120 tokens；权重丢弃，不作质量排序。
+
+micro32下baseline/phase约131.5k/86.0k tokens/s，allocated峰值12.65/15.34GiB；Block AttnRes PyTorch参考约41.5k、22.85GiB（reserved27.67GiB）。后者不是原生产融合kernel速度。六core各268M tokens的纯训练估计合计5.55小时，尚须加启动、验证和保存。峰值从预热后开始记录，不能替代冷编译、完整eval尾batch及checkpoint预检。
+
+另完成三个默认Inductor profile：baseline/phase/Block约201.8k/170.2k/119.2k tokens/s，含50稳态+10预热的完整optimizer updates，冷预热分别37.1/70.7/76.8秒。全部profile合计860次更新、14,090,240真实NTP tokens，权重丢弃。该编译精度策略后来由初始化核验修正，旧速度是其自身执行路径的测量，不能直接当成新canonical配方速度。六臂默认策略各一步的完整3,906-block评价及optimizer checkpoint/timing-sidecar均成功，见 [preflight](../../results/phase_adjoint_20260929/gpu_preflight.json)；这些状态不用于后续正式质量轨迹。
+
+[Canonical预检](../../results/phase_adjoint_20260929/canonical_gpu_preflight.json)随后在修正的数值策略下完成七臂profile，各50稳态+10预热更新。baseline/gain/phase/terminal/boundary/post-frozen/Block约203.0k/200.9k/172.0k/171.3k/188.3k/176.4k/118.6k tokens/s。全部profile合计1,280次更新、20,971,520 NTP tokens。phase与terminal的allocated峰值均10.36GiB，baseline8.46GiB；terminal没有在此profile显示更低的训练成本。phase每token时间比baseline约多18%，不能称性能优势。
+
+七臂各一步的完整raw eager评价、checkpoint/sidecar保存均成功，baseline与phase又各恢复到第二步，配置、源码、数据、optimizer和RNG身份检查通过。这不是GPU连续/恢复轨迹逐位等价证明。canonical一次更新后的baseline/phase全持出NLL约10.861253/10.861248，相差5.16e-6 nat；这些预检状态不进入正式质量轨迹。
+
+## 13. E-R5-CUDA-INIT：初始化数值路径与评价修正
+
+[四模式CUDA回执](../../results/phase_adjoint_20260929/cuda_initialization.json)来自独立 [诊断脚本](../../experiments/verify_cuda_initialization.py)，真实FWE持出batch2/T512、24L×256d、seed419，**零optimizer updates**，各模型训练反向重复两次。实际Torch2.12.1+cu130、FP32参数、BF16 AMP；installed配置源码SHA和反向调用时的autocast状态均记录。
+
+Eager baseline与phase初始logits最大差0，loss差0，共同195个parameter tensors逐位一致。共享主干梯度相对L2差约0.0030；同一模型重复反向约0.0023–0.0026，不能写成GPU主干梯度逐位一致。该低精度运行不是float64代数证明的替代。
+
+默认编译路径的phase no-grad评价与baseline出现logits差异。启用`emulate_precision_casts=True`且`backward_pass_autocast=off`后，compiled **training** 初始化baseline/phase logits及loss完全相同；compiled no-grad **evaluation**仍有最大logits差0.255859、该batch loss差8.30e-5 nat。此前一次更新后的完整validation约0.005 nat差不归因于算法收益，也未声称已完全解释其数值成因。
+
+因此所有正式持出NLL统一用原始模型eager BF16 evaluator，编译只用于训练，并锁定casts及反向策略到resume身份。旧默认编译checkpoint保留为工程回执，正式轨迹从新起点开始。这里确立的是测量协议与有限精度边界，没有建立自然语言优势。
+
+## 14. E-R5-STUDY：已收尾的单seed自然语言开发诊断
+
+固定 [study plan](../../results/phase_adjoint_20260929/study_plan.json)与 [顺序驱动](../../experiments/run_residual_study.py)曾启动，随后按用户要求停止；远端根目录`/root/autodl-tmp/isoHC/r5/study/canonical7-r2`，controller PID8840。七臂各两个2,048-update前缀，再按前缀最后NLL选择LR并精确续跑至16,384 updates；详情由 [roadmap](roadmap.md)管理。source、cache、评价及日程被冻结；选中的完整轨迹每臂268,435,456 tokens。
+
+独立调度审查在launch前发现重选LR误复用旧primary，以及child退出未确认后继续调度两处漏洞。修复后15项本地、15项远端mock检查通过，独立复核确认原反例被阻止。first planning-only版本保留，模型和已完成GPU测量不受影响。最新执行观察见 [diagnostic summary](../../results/phase_adjoint_20260929/diagnostic_summary.json)，不是完整质量结论；该文件含观察时间，不能把旧进度当成当前完成状态。
+
+当前是seed419的开发轨迹。未完成臂、失败LR或只有前缀的结果不能在不同tokens下作最终排序；开发集调参不是独立确认，2点LR grid也不是穷尽配方搜索。本轮不继续获得这些未完成的终点。最终收尾如下。
+
+## 15. E-R5-CLOSEOUT：强gain未被超过，停止本轮投入
+
+用户于9月29日要求快速收尾。七条2,048-update、33,554,432-token pilot有效完成：baseline/gain/phase两点LR，terminal仅3e-4；terminal6e-4已中断，boundary/post-frozen/Block质量pilot未启动，268M主预算全部未完成。独立 [closeout analysis](../../results/phase_adjoint_20260929/closeout_analysis.json)核对七条quality signature、源码/配置/数据/评价/预算一致，完整D比较为空。
+
+| 方法 | LR3e-4最终NLL | LR6e-4最终NLL |
+| --- | ---: | ---: |
+| baseline | 5.412556 | 5.124124 |
+| gain | 5.387013 | 5.065748 |
+| phase | 5.391525 | 5.086086 |
+| terminal | 5.391318 | 中断，不排名 |
+
+phase比gain分别差0.004512/0.020337 nat，profile每token时间又比gain多约16.8%。这组早期开发结果没有显示新增状态和内部交汇的净价值，停止phase的优先推进及扩规模。不是成熟LM失败或所有多流无效的证明；也不把“尚未充分训练”变成自动追加投入的理由。
+
+停止了本轮拥有的controller/child进程组并核验退出，原始日志/协议/完成记录已保存本地；Chrome在UTC23:51确认原实例已关机、GPU释放。详见 [停止回执](../../results/phase_adjoint_20260929/closeout.json)、[原始快照](../../results/phase_adjoint_20260929/pilot_snapshot/)和用户请求的 [理论与实验收尾报告](reports/R5_CLOSEOUT_20260929.md)。没有后续付费任务或自动恢复安排。

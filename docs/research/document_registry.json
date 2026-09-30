@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated": "2026-09-26",
+  "updated": "2026-09-29",
   "canonical_entry": "docs/research/README.md",
   "instruction_entry": "AGENTS.md",
   "scope": "Git-tracked and non-ignored Markdown/TeX. Classifications govern document authority, not experimental verification status.",
@@ -58,7 +58,7 @@
       "path": "docs/research/architecture.md",
       "status": "current",
       "owner": "docs/research/architecture.md",
-      "reason": "Implemented adjoint read/write algorithm and its initialization, theoretical scope and engineering contracts."
+      "reason": "R5 phase-adjoint algorithm and strong controls, with preserved R4 contract and engineering limits."
     },
     {
       "path": "experiments/README.md",
@@ -319,6 +319,18 @@
       "status": "verification_receipt",
       "owner": "docs/research/evidence.md",
       "reason": "Full-model contract, synthetic NTP integration training and local CPU timing; not natural-language or SOTA evidence."
+    },
+    {
+      "path": "results/phase_adjoint_20260929/README.md",
+      "status": "verification_receipt",
+      "owner": "docs/research/evidence.md",
+      "reason": "R5 independent algebra, implementation/runner checks and separately scoped remote/data/GPU receipts; not a quality claim."
+    },
+    {
+      "path": "docs/research/reports/R5_CLOSEOUT_20260929.md",
+      "status": "verification_receipt",
+      "owner": "docs/research/evidence.md",
+      "reason": "User-requested closeout analysis of valid theory contracts, seven completed pilot endpoints, costs, limitations, process failures and verified shutdown. Not an execution directive."
     }
   ],
   "raw_groups": [

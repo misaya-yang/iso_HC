@@ -1,19 +1,21 @@
 # LLM residual algorithm research
 
-当前算法候选：**伴随读写残差 `adjoint-hc`**。两条流用同一个单位向量读取和写回，保留identity carry；无需额外混合矩阵、teacher或离散调度。已实现完整Transformer和训练入口，正在验证质量与成本，尚非SOTA结论。
+**R5诊断已关闭（2026-09-29）**。同seed短段比较中，gain在两档LR均优于phase，成本接近baseline；268M-token主预算未完成。`phase-adjoint`与`terminal-adjoint`保留为研究资产，当前没有批准的新候选，不自动恢复或扩规模。R4 `adjoint-hc` 保留为参考，RDM保持归档。
 
-- [算法与可运行实现](docs/research/architecture.md) · [源码](lm/adjoint.py)
-- [研究目标](docs/research/README.md) · [理论证明](docs/research/theory.md)
-- [训练/工程回执](results/adjoint_hc_20260926/README.md) · [证据台账](docs/research/evidence.md)
-- [下一实验](docs/research/roadmap.md) · [先行工作](docs/research/literature.md)
-- [文档权威](AGENTS.md) · [登记](docs/research/document_registry.json)
+- [R5关闭报告](docs/research/reports/R5_CLOSEOUT_20260929.md)
+- [研究目标与当前决定](docs/research/README.md)
+- [算法与强skip对照](docs/research/architecture.md) · [证明和反例](docs/research/theory.md)
+- [有限GPU诊断与决定](docs/research/roadmap.md) · [最新先行性](docs/research/literature.md)
+- [证据与执行状态](docs/research/evidence.md) · [文档权威](AGENTS.md)
+- [保留实现](lm/phase_adjoint.py) · [Block AttnRes对照](lm/block_attnres.py)
+- [数据准备](experiments/prepare_residual_data.py) · [可恢复训练入口](experiments/residual_lm_diagnostic.py)
+
+以下命令仅核验保留资产：
 
 ```bash
-python3 -m unittest discover -s tests -p 'test_adjoint_contracts.py' -v
-python3 experiments/adjoint_hc_probe.py
+python3 experiments/verify_phase_initialization.py
+python3 -m unittest discover -s tests -p 'test_phase_adjoint.py' -v
 python3 scripts/check_research_docs.py
 ```
 
-probe执行小型合成NTP训练和本地CPU性能检查，不下载数据，不作LM优劣判决。正式runner的新增方法与缓存参数见 [experiments/README.md](experiments/README.md)。
-
-RDM已撤销主线资格；旧IsoHC、历史计划与用户源文保留原位，不发布当前执行指令。2027主会目标不变，方法价值由充分训练与强基线决定。
+NeurIPS2027/ICML2027仍是长期研究目标，当前没有可承诺的投稿候选或SOTA结果。数学合同、实现可训、自然语言收益和论文贡献分别登记。历史数据不改写，旧计划不自动触发执行；后续训练需新的明确授权，并使用有完整manifest的本地cache。

@@ -1,0 +1,75 @@
+{
+  "python": "3.12.3 | packaged by Anaconda, Inc. | (main, May  6 2024, 19:46:43) [GCC 11.2.0]",
+  "torch": "2.12.1+cu130",
+  "cuda_available": false,
+  "scope": "Remote CPU preflight before GPU startup, on the user-authorized no-card instance; tiny synthetic integration, not natural-language quality or GPU",
+  "tests": {
+    "remote-phase-tests.log": [
+      "----------------------------------------------------------------------",
+      "Ran 16 tests in 7.694s",
+      "",
+      "OK"
+    ],
+    "remote-runner-tests-single-thread.log": [
+      "----------------------------------------------------------------------",
+      "Ran 12 tests in 18.011s",
+      "",
+      "OK"
+    ],
+    "remote-data-tests.log": [
+      "----------------------------------------------------------------------",
+      "Ran 20 tests in 5.098s",
+      "",
+      "OK"
+    ],
+    "remote-attnres-tests.log": [
+      "----------------------------------------------------------------------",
+      "Ran 8 tests in 2.127s",
+      "",
+      "OK"
+    ]
+  },
+  "source_sha256": {
+    "lm/phase_adjoint.py": "0ce868d71090eff5e791e2c581e2960a959d7e4c7a1eac0931b3eb40d66b936e",
+    "lm/block_attnres.py": "7c55ab53d6fdb6add56681ed9ab7f10bf1bdb68f3d01203bacf80178c2f7c58f",
+    "experiments/residual_lm_diagnostic.py": "2d44913e24b118aa540a21a18a4eba3b094556e98c29d2ee27758a594c6c3314",
+    "experiments/prepare_residual_data.py": "5451b899086b9d313f339fe6b7eada57effb736bf3ba3d4c44a644396a56658a"
+  },
+  "recorded_at_utc": "2026-09-29T19:08:14.230154+00:00",
+  "source_identity_scope": "Remote file SHA-256 rechecked after GPU startup; matches the locally tested final Python snapshot.",
+  "no_card_memory_limit_bytes": 2147483648,
+  "retry": {
+    "initial_compiled_runner_test": "Compiled test process was killed while the no-card cgroup limit was 2 GiB; no OOM kill counter confirmed the cause. Lowering compilation parallelism succeeded. This is an execution failure, not model quality evidence.",
+    "successful_environment": {
+      "TORCHINDUCTOR_COMPILE_THREADS": "1",
+      "MAX_JOBS": "1",
+      "OMP_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1"
+    }
+  },
+  "gpu_startup": {
+    "recorded_at_utc": "2026-09-29T20:54:20.882426+00:00",
+    "torch": "2.12.1+cu130",
+    "cuda_runtime": "13.0",
+    "cuda_available": true,
+    "gpu": "NVIDIA GeForce RTX 4080 SUPER",
+    "memory_total_bytes": 33796456448,
+    "capability": [
+      8,
+      9
+    ],
+    "bf16_supported": true,
+    "cgroup_memory_max": "66571993088"
+  },
+  "provisioning": {
+    "instance_id": "g8cvwyx5zx-7e5c5737",
+    "host": "E94",
+    "cloned": false,
+    "price_cny_per_hour": 1.58,
+    "spending_ceiling_cny": 20,
+    "auto_shutdown_client_time": "2026-09-30 03:45:00 America/New_York",
+    "auto_shutdown_utc": "2026-09-30T07:45:00Z",
+    "ui_estimated_remaining_cny": 17.17,
+    "status": "Original instance GPU startup and provider timer confirmed in Chrome; profile pipeline running"
+  }
+}

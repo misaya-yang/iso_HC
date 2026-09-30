@@ -1,0 +1,183 @@
+{
+  "amp": true,
+  "cache_sha256": {
+    "train": "6809819b1859267e1f91cac108ad702d26fc1b584cc1696b8652a2528bf9d5b2",
+    "val": "f71373954e636d0ab8d003624556658cf19eb054f2f875ae84045017c28b0dc9"
+  },
+  "compile": true,
+  "compile_backend": "inductor",
+  "compile_cache_root": "/root/autodl-tmp/isoHC/r5/cache/canonical-m32",
+  "compile_mode": "default",
+  "data_manifest_sha256": "6c7bf8b8de5914080c4c1352910a5db45fe8e5905cbf7a5a62882bef132982ac",
+  "deadline_utc": "2026-09-30T07:15:00+00:00",
+  "deterministic": false,
+  "estimate_formula": "remaining_updates * 32 * 512 / method_tokens_per_second + stage_overhead_seconds",
+  "format_version": 1,
+  "learning_rates": [
+    0.0003,
+    0.0006
+  ],
+  "matched_order": [
+    "phase-adjoint-post-frozen",
+    "boundary-skip"
+  ],
+  "matched_phase_lr": true,
+  "min_lr_ratio": 0.1,
+  "numerical_policy": {
+    "backward_call_autocast": "off",
+    "backward_pass_autocast": {
+      "applicable": true,
+      "applied": true,
+      "effective": "off",
+      "requested": "off",
+      "supported": true
+    },
+    "compiled_training": true,
+    "emulate_precision_casts": {
+      "applicable": true,
+      "applied": true,
+      "effective": true,
+      "requested": true,
+      "supported": true
+    },
+    "evaluation": "raw_eager",
+    "evaluation_autocast_dtype": "must match identity.amp_dtype (torch.bfloat16 or torch.float16)"
+  },
+  "paths": {
+    "data_manifest": "/root/autodl-tmp/isoHC/r5/data/fwe300m/manifest.json",
+    "output_root": "/root/autodl-tmp/isoHC/r5/study/canonical7-r2",
+    "python": "/root/miniconda3/bin/python",
+    "repo_root": "/root/autodl-tmp/isoHC/r5/src",
+    "train_cache": "/root/autodl-tmp/isoHC/r5/data/fwe300m/train.pt",
+    "val_cache": "/root/autodl-tmp/isoHC/r5/data/fwe300m/val.pt"
+  },
+  "pilot_order": [
+    {
+      "lr": 0.0003,
+      "method": "baseline"
+    },
+    {
+      "lr": 0.0006,
+      "method": "baseline"
+    },
+    {
+      "lr": 0.0003,
+      "method": "gain"
+    },
+    {
+      "lr": 0.0006,
+      "method": "gain"
+    },
+    {
+      "lr": 0.0003,
+      "method": "phase-adjoint"
+    },
+    {
+      "lr": 0.0006,
+      "method": "phase-adjoint"
+    },
+    {
+      "lr": 0.0003,
+      "method": "terminal-adjoint"
+    },
+    {
+      "lr": 0.0006,
+      "method": "terminal-adjoint"
+    },
+    {
+      "lr": 0.0003,
+      "method": "boundary-skip"
+    },
+    {
+      "lr": 0.0006,
+      "method": "boundary-skip"
+    },
+    {
+      "lr": 0.0003,
+      "method": "phase-adjoint-post-frozen"
+    },
+    {
+      "lr": 0.0006,
+      "method": "phase-adjoint-post-frozen"
+    },
+    {
+      "lr": 0.0003,
+      "method": "block-attnres"
+    },
+    {
+      "lr": 0.0006,
+      "method": "block-attnres"
+    }
+  ],
+  "pilot_updates": 2048,
+  "primary_order": [
+    "baseline",
+    "gain",
+    "phase-adjoint",
+    "terminal-adjoint",
+    "boundary-skip",
+    "phase-adjoint-post-frozen",
+    "block-attnres"
+  ],
+  "profile_rates": {
+    "baseline": 162363.30257091054,
+    "block-attnres": 94915.80816308015,
+    "boundary-skip": 150609.7309683925,
+    "gain": 160759.92845670343,
+    "phase-adjoint": 137624.44681947716,
+    "phase-adjoint-post-frozen": 141121.40821497556,
+    "terminal-adjoint": 137020.07192571877
+  },
+  "profiles_sha256": "5d77af245f6c767a6370564f8cbbeccdfab7bda92385b5c478fb451eca493dce",
+  "protocol": {
+    "beta1": 0.9,
+    "beta2": 0.95,
+    "block_size": 4,
+    "boundary": 12,
+    "checkpoint_every": 2048,
+    "context_length": 512,
+    "data_seed": 20260929,
+    "device": "cuda",
+    "dropout": 0.0,
+    "eval_every": 2048,
+    "grad_accum": 1,
+    "grad_clip": 1.0,
+    "heads": 4,
+    "layers": 24,
+    "micro_batch": 32,
+    "mlp_ratio": 4.0,
+    "model_seed": 419,
+    "residual_init_scale": 0.14433756729740646,
+    "updates": 16384,
+    "val_blocks": 3906,
+    "vocab_size": 50257,
+    "warmup_updates": 256,
+    "weight_decay": 0.1,
+    "width": 256
+  },
+  "reserve_seconds": 1200.0,
+  "reserve_semantics": "Before deadline; never extend deadline or terminate an in-flight stage",
+  "selection_freeze": "Any primary start freezes all selections; restarts never retry tuning afterward",
+  "selection_policy": "Lowest finite successful pilot final NLL; exact ties use 3e-4; failed trials ineligible",
+  "source_sha256": {
+    "controller": "4d8aa667de48e1d5e52e8c6ce02a6fd48d411054e06520f444d8464540c4b8c7",
+    "experiments/residual_lm_diagnostic.py": "a04b27946d6fa0e6c518080fddd99f4ddcf7b33d2778ac2984debfb9d2d8aced",
+    "isohc/__init__.py": "37bb051219c1a1c3526016f9284179c27ae9251705e0f47803b3582e1cd226df",
+    "isohc/layers.py": "18f0562d7ffa3fc9ebae982dd4d787ab397188ce003144ee134eda13fbc4c01c",
+    "isohc/projection.py": "28f5ba0f189afa71f24cf37b78b88945fde506cac1d598c2c7ee1d42966bd894",
+    "isohc/transformer.py": "b422a6c3ece48d0fcad037e6b5d5f1baf041263b5456433c537dd24a08422b24",
+    "lm/__init__.py": "968e8bdcb7ccde6542db81b2b1d72958e16be1d2cf983467ca0e4e8a4ae47507",
+    "lm/adjoint.py": "b8baa5f1820256721e2c4029d87c59fdb621991e08f612fa42f461f707ba08c0",
+    "lm/block_attnres.py": "7c55ab53d6fdb6add56681ed9ab7f10bf1bdb68f3d01203bacf80178c2f7c58f",
+    "lm/data.py": "dda05c21b96b0159a725cdf916db8b11dce46ee03fa7671600cb098609ca818b",
+    "lm/diagnostics.py": "42925d4e427164319d0a5a54f8c65a28af150625647767343a001dbe60f4fdee",
+    "lm/headmix.py": "825afe2a3cf53b2bc7f5d1371ccddae3b88240893623a6762eb009736867a6a8",
+    "lm/mixing.py": "6230be45b83ece93e5c15a72d7640892cebacc28750d347b3080d43d5bd60a71",
+    "lm/models.py": "2860d38c1a1a86541b049c8272a7531c5cf8ae1d81adadc31a0d17a727a79597",
+    "lm/phase_adjoint.py": "519cb7ce0fcc657eac89c70d3c5a52456f15549f3dcbb1c70668a8a2847760e4",
+    "lm/train.py": "a4e35b8f00984df6daf6c7470506957f399d408fad76b566043bfc6aefc98d14",
+    "lm/transport_analysis.py": "a96bfb4343dac47cbd44960e8de0b28064f95321890e8e783038ea27d2355bd0"
+  },
+  "stage_overhead_seconds": 300.0,
+  "wall_cost_semantics": "Child monotonic wall includes imports, setup, train, evaluation, saves and exit; tuning includes both pilots; selected trajectory includes its pilot plus continuation; these two views overlap. Profiles, preparation and inter-stage gaps are excluded."
+}

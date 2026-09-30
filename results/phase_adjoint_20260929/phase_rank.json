@@ -1,0 +1,443 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-09-29T21:36:57.408358+00:00",
+  "scope": "Independent CPU float64 reference-address algebra and sample nonlinear residual program; no candidate model import, LM implementation/training, data download, or GPU use",
+  "comparison_class": {
+    "addresses": "real Euclidean unit reference vectors in n stream dimensions",
+    "initial_state": "X0=e1*x0, counted as the first reference address",
+    "scales": "a_t=c_t dot e1 > 0",
+    "read_write": "read=c_t^T X/a_t; write=a_t*c_t*delta; no transport",
+    "source_contract": "exact coefficients for every past common branch source, not just adjacent sources",
+    "output": "one serialized terminal reader may be included; parallel readers have no reader-to-reader source edges",
+    "rank_tolerance": 1e-12,
+    "algebra_tolerance": 1e-12
+  },
+  "environment": {
+    "python_version": "3.9.6",
+    "python_executable": "/Library/Developer/CommandLineTools/usr/bin/python3",
+    "numpy_version": "2.0.2",
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "dtype": "float64"
+  },
+  "checks": {
+    "n3_unit_addresses": true,
+    "n3_positive_nonincreasing_scales_equal_anchor_projection": true,
+    "n3_all_causal_coefficients_including_input_and_final_reader_equal_one": true,
+    "n3_gram_has_markov_ratio_form": true,
+    "n3_gram_rank_equals_distinct_positive_levels": true,
+    "n3_repeated_level_directions_identical": true,
+    "n3_new_innovations_orthogonal_to_entire_history": true,
+    "n3_innovation_norms_match_one_minus_rho_squared": true,
+    "n3_every_prefix_rank_matches_distinct_levels": true,
+    "query_gram_has_brownian_min_time_form": true,
+    "query_increments_orthogonal_to_history": true,
+    "query_increment_norms_match_time_increments": true,
+    "n2_three_distinct_levels_target_gram_has_rank_three": true,
+    "n2_three_distinct_levels_constructor_rejected": true,
+    "negative_scale_counterexample_keeps_exact_causal_kernel": true,
+    "negative_scale_counterexample_refutes_signed_level_count_and_monotonicity": true,
+    "parallel_readers_all_true_source_coefficients_equal_one": true,
+    "parallel_counterexample_keeps_positive_unit_addresses": true,
+    "parallel_readers_have_same_scale_different_directions": true,
+    "parallel_readers_have_more_levels_than_address_dimension": true,
+    "parallel_counterexample_violates_only_unrequired_reader_to_reader_edges": true,
+    "approximate_two_dimensional_kernel_has_many_distinct_levels": true,
+    "approximate_counterexample_keeps_positive_unit_nonincreasing_addresses": true,
+    "approximate_counterexample_is_close_but_not_exact": true,
+    "approximate_counterexample_respects_analytic_error_bound": true,
+    "sample_nonlinear_branches_have_baseline_inputs_and_updates": true,
+    "sample_nonlinear_final_reader_matches_baseline": true
+  },
+  "all_checks_passed": true,
+  "measurements": {
+    "n3": {
+      "streams": 3,
+      "scales": [
+        1.0,
+        1.0,
+        0.8,
+        0.8,
+        0.5,
+        0.5,
+        0.5
+      ],
+      "addresses": [
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.8,
+          0.5999999999999999,
+          0.0
+        ],
+        [
+          0.8,
+          0.5999999999999999,
+          0.0
+        ],
+        [
+          0.5,
+          0.3749999999999999,
+          0.7806247497997998
+        ],
+        [
+          0.5,
+          0.3749999999999999,
+          0.7806247497997998
+        ],
+        [
+          0.5,
+          0.3749999999999999,
+          0.7806247497997998
+        ]
+      ],
+      "embedding_index": 0,
+      "branch_indices": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "final_reader_index": 6,
+      "unit_max_error": 1.1102230246251565e-16,
+      "anchor_projection_max_error": 0.0,
+      "causal_kernel_max_error": 1.1102230246251565e-16,
+      "gram_formula_max_error": 1.1102230246251565e-16,
+      "gram_rank": 3,
+      "distinct_levels": 3,
+      "gram_eigenvalues": [
+        -7.406202997036261e-16,
+        -8.292674726794928e-17,
+        5.722730237433182e-33,
+        8.061194338615881e-17,
+        0.36783756873257295,
+        1.3565651700664185,
+        5.275597261201008
+      ],
+      "repeated_direction_max_error": 0.0,
+      "innovations": [
+        {
+          "index": 1,
+          "rho": 1.0,
+          "strict_drop": false,
+          "history_inner_product_max_error": 0.0,
+          "innovation_norm_squared": 0.0,
+          "expected_norm_squared": 0.0,
+          "norm_squared_error": 0.0,
+          "address_prefix_rank": 1,
+          "expected_prefix_rank": 1
+        },
+        {
+          "index": 2,
+          "rho": 0.8,
+          "strict_drop": true,
+          "history_inner_product_max_error": 0.0,
+          "innovation_norm_squared": 0.3599999999999998,
+          "expected_norm_squared": 0.3599999999999999,
+          "norm_squared_error": 5.551115123125783e-17,
+          "address_prefix_rank": 2,
+          "expected_prefix_rank": 2
+        },
+        {
+          "index": 3,
+          "rho": 1.0,
+          "strict_drop": false,
+          "history_inner_product_max_error": 0.0,
+          "innovation_norm_squared": 0.0,
+          "expected_norm_squared": 0.0,
+          "norm_squared_error": 0.0,
+          "address_prefix_rank": 2,
+          "expected_prefix_rank": 2
+        },
+        {
+          "index": 4,
+          "rho": 0.625,
+          "strict_drop": true,
+          "history_inner_product_max_error": 0.0,
+          "innovation_norm_squared": 0.609375,
+          "expected_norm_squared": 0.609375,
+          "norm_squared_error": 0.0,
+          "address_prefix_rank": 3,
+          "expected_prefix_rank": 3
+        },
+        {
+          "index": 5,
+          "rho": 1.0,
+          "strict_drop": false,
+          "history_inner_product_max_error": 0.0,
+          "innovation_norm_squared": 0.0,
+          "expected_norm_squared": 0.0,
+          "norm_squared_error": 0.0,
+          "address_prefix_rank": 3,
+          "expected_prefix_rank": 3
+        },
+        {
+          "index": 6,
+          "rho": 1.0,
+          "strict_drop": false,
+          "history_inner_product_max_error": 0.0,
+          "innovation_norm_squared": 0.0,
+          "expected_norm_squared": 0.0,
+          "norm_squared_error": 0.0,
+          "address_prefix_rank": 3,
+          "expected_prefix_rank": 3
+        }
+      ],
+      "brownian_times": [
+        1.0,
+        1.0,
+        1.5624999999999998,
+        1.5624999999999998,
+        4.0,
+        4.0,
+        4.0
+      ],
+      "query_gram_max_error": 0.0,
+      "query_increment_history_max_errors": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "query_increment_norm_squared_errors": [
+        0.0,
+        1.1102230246251565e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "n2_unrealizable_target": {
+      "scales": [
+        1.0,
+        0.8,
+        0.5
+      ],
+      "target_gram": [
+        [
+          1.0,
+          0.8,
+          0.5
+        ],
+        [
+          0.8,
+          1.0,
+          0.625
+        ],
+        [
+          0.5,
+          0.625,
+          1.0
+        ]
+      ],
+      "target_rank": 3,
+      "target_eigenvalues": [
+        0.1817143191550226,
+        0.526855240830919,
+        2.291430440014058
+      ],
+      "target_determinant": 0.21937499999999993,
+      "constructor_rejected": true,
+      "scope": "impossibility only for this exact positive-scale reference-address interface"
+    },
+    "negative_scale_counterexample": {
+      "relaxed_assumption": "positive a_t",
+      "addresses": [
+        [
+          1.0
+        ],
+        [
+          -1.0
+        ],
+        [
+          1.0
+        ],
+        [
+          -1.0
+        ]
+      ],
+      "scales": [
+        1.0,
+        -1.0,
+        1.0,
+        -1.0
+      ],
+      "causal_kernel_max_error": 0.0,
+      "gram_rank": 1,
+      "distinct_signed_levels": 2
+    },
+    "parallel_reader_counterexample": {
+      "relaxed_assumption": "serialized all-past source contract between every pair of addresses",
+      "writer_addresses_including_embedding": [
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0
+        ]
+      ],
+      "reader_addresses": [
+        [
+          0.8,
+          0.6
+        ],
+        [
+          0.8,
+          -0.6
+        ],
+        [
+          0.6,
+          0.8
+        ]
+      ],
+      "source_to_reader_kernel": [
+        [
+          1.0,
+          1.0,
+          1.0
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ],
+        [
+          1.0,
+          1.0,
+          1.0
+        ]
+      ],
+      "source_kernel_max_error": 0.0,
+      "combined_gram_rank": 2,
+      "distinct_positive_levels": 3,
+      "unit_max_error": 0.0,
+      "same_scale_direction_gap": 1.2,
+      "unrequired_reader_to_reader_kernel": [
+        [
+          1.0,
+          0.28000000000000014,
+          0.7199999999999999
+        ],
+        [
+          0.28000000000000014,
+          1.0,
+          0.0
+        ],
+        [
+          1.28,
+          0.0,
+          1.0
+        ]
+      ],
+      "unrequired_serial_kernel_max_error": 1.0
+    },
+    "approximate_kernel_counterexample": {
+      "relaxed_assumption": "exact all-past coefficient equality",
+      "streams": 2,
+      "angles": [
+        0.0,
+        6.25e-05,
+        0.000125,
+        0.0001875,
+        0.00025,
+        0.0003125,
+        0.000375,
+        0.0004375,
+        0.0005,
+        0.0005625000000000001,
+        0.000625,
+        0.0006875,
+        0.00075,
+        0.0008125000000000001,
+        0.000875,
+        0.0009375,
+        0.001
+      ],
+      "scales": [
+        1.0,
+        0.999999998046875,
+        0.9999999921875,
+        0.999999982421875,
+        0.9999999687500002,
+        0.9999999511718753,
+        0.9999999296875008,
+        0.9999999042968766,
+        0.9999998750000026,
+        0.9999998417968792,
+        0.9999998046875064,
+        0.9999997636718843,
+        0.9999997187500131,
+        0.9999996699218932,
+        0.9999996171875244,
+        0.9999995605469072,
+        0.9999995000000417
+      ],
+      "distinct_levels": 17,
+      "gram_rank": 2,
+      "unit_max_error": 2.220446049250313e-16,
+      "causal_kernel_max_error": 2.500001041738642e-07,
+      "declared_approximation_tolerance": 1e-06,
+      "analytic_error_upper_bound": 1.000000166666753e-06
+    },
+    "sample_nonlinear_residual_program": {
+      "seed": 20260929,
+      "branches": 5,
+      "width": 7,
+      "branch": "shared RMS normalization then 0.2*tanh(W@z+b)+0.04*sin(z)",
+      "input_sha256": "38b81f1a6bc839261517175d27ee11f34b673e463c900a9eb3ffd1fb5071e910",
+      "weights_sha256": "6ea379baea2e7e394bbfd12e25c15f0088856ac299f2a80535fab2204f8db1d2",
+      "biases_sha256": "e4d6185740fc4cd8ff06ff4ecb2b55b2b363761a91cedc6d4dca7deaaf4dd8bd",
+      "branch_input_max_errors": [
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        2.220446049250313e-16,
+        4.440892098500626e-16
+      ],
+      "branch_delta_max_errors": [
+        0.0,
+        0.0,
+        2.7755575615628914e-17,
+        2.2551405187698492e-17,
+        2.42861286636753e-17
+      ],
+      "active_read_after_update_max_errors": [
+        0.0,
+        2.220446049250313e-16,
+        4.440892098500626e-16,
+        4.440892098500626e-16,
+        2.220446049250313e-16
+      ],
+      "final_reader_max_error": 2.220446049250313e-16
+    }
+  },
+  "conclusions_not_supported": [
+    "language-model quality or training advantage",
+    "GPU efficiency",
+    "whole-network Jacobian stability",
+    "universal HC state or task-memory lower bound",
+    "rank equals level count under approximate coefficients or parallel terminal readers",
+    "dynamic-router derivative claims from frozen reference-address rank alone",
+    "novelty of Markov/Brownian Gram identities or linear algebra"
+  ],
+  "source_path": "experiments/verify_phase_rank_contract.py",
+  "source_sha256": "3ea032a42f2175c9a6ba54811ab7fc14294a8ba09b2faaa4cf3adc95ae33f92c"
+}

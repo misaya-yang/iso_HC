@@ -1,7 +1,8 @@
 # 文档导航
 
-从 [当前研究主线](research/README.md) 开始。R4已实现adjoint-hc算法；坚持标准训练与真实工程成本，RDM保持历史状态。
+从 [研究入口与当前决定](research/README.md) 开始。R5诊断已关闭，phase/terminal保留为研究资产；当前没有批准的新候选，不自动恢复或扩规模。R4保留作参考，RDM保持归档。
 
+- [R5关闭报告](research/reports/R5_CLOSEOUT_20260929.md)：短段结果、关闭原因和未完成预算。
 - [算法](research/architecture.md)：伴随读写更新、初始化及实现合同。
 - [理论](research/theory.md)：证明和适用边界。
 - [证据台账](research/evidence.md)：已完成事实。

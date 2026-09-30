@@ -506,7 +506,7 @@ D_{\widehat j}-\min_{j\in\mathcal A}D_j\le2\varepsilon.
 
 RDM已撤销主线资格，完整模型与预测器尚未实现、训练；[独立原语核验](../../results/depth_memory_contracts_20260925/README.md)只检查本节声明的局部合同。这些局部命题不支持恢复RDM优先级；主线仍应先满足最小原语、标准训练与真实工程合同。
 
-## 10. R4：严格 adjoint 两流残差
+## 10. R4：严格 adjoint 两流残差（保留的实现与比较臂）
 
 ### 10.1 确定的更新规则
 
@@ -603,4 +603,189 @@ K_{tj}=c_t^\top c_j
 
 R4 是 [一般 HC](https://arxiv.org/html/2409.19606) 读写模型的受限子类；[RMT](https://arxiv.org/html/2506.22696) 已有向量检索与外积写回。[Stream Collapse](https://arxiv.org/html/2606.03483v1) 已用逐特征流初始化破对称，因此 signed carrier 也不能独立声称为首次。将 (28) 改成 \(X'=X+\beta c(v-c^\top X)\) 会进入已有 [DDL](https://arxiv.org/abs/2601.00417) 式目标擦写思路，不属于当前规则。
 
-[CliffSearch](https://cliffsearch.ai/assets/cliffsearch_preprint.pdf) 的公开 HC 搜索资产还包含 GrassmannianSubspaceRouting 的投影—提升机制；其导出代码与严格 tied 更新、动态路由、初始化及理论合同的逐式比较尚待完成。[原文 Table 6 与导出材料](https://cliffsearch.ai/assets/cliffsearch_preprint.pdf)将 raw-best 节点 G3/H2 判为跨样本泄漏无效，同名另一节点 H1 通过了该项审计，不能按 alias 混用有效性或把 raw-best 数字当成有效质量基线。机制上的邻近性仍需核查，当前不能声称 R4 的单位读写原语或局部谱结论首次提出。所选算法值得实现和公平训练，但竞争力、动态路由的净收益、carrier 是否主要充当 embedding 长 skip，以及相对强 iHC/mHC/AttnRes 的实际收益，均仍待验证。
+[CliffSearch公开节点代码](https://cliffsearch.ai/best-node/)的 `g002_n0024_66b987`（GrassmannianSubspaceRouting）已逐式核读：有效读向量为 \(q=U\alpha\)，写向量为 \(b=\operatorname{diag}(\beta)U\gamma\)，其中softmax \(\alpha\)、lift \(\gamma\)及逐流sigmoid \(\beta\)独立。故同基project/lift已有直接先行性；一般 \(q^Tb\ne1\)、\(\|q\|\ne1\)，且逐流门可使写回离开 \(\operatorname{span}(U)\)，不能直接赋予严格伴随的补空间保持合同。该节点随机Cayley初始化，没有当前一次phase/terminal交汇合同；这些差异不证明绑定更有任务价值，也不证明首次性。这里只核读公开索引源码，没有执行其benchmark或测工程速度。其自动review将solve次序称为转置差异不成立：\((I-A)^{-1}(I+A)=(I+A)(I-A)^{-1}\)，因为二者为同一矩阵的可交换有理函数。[原文 Table 6 与导出材料](https://cliffsearch.ai/assets/cliffsearch_preprint.pdf)将 raw-best 节点 G3/H2 判为跨样本泄漏无效，同名另一节点 H1 通过了该项审计，不能按 alias 混用有效性或把 raw-best 数字当成有效质量基线。机制上的邻近性仍需核查，当前不能声称 R4 的单位读写原语或局部谱结论首次提出。所选算法值得实现和公平训练，但竞争力、动态路由的净收益、carrier 是否主要充当 embedding 长 skip，以及相对强 iHC/mHC/AttnRes 的实际收益，均仍待验证。
+
+## 11. R5：分段伴随读写，让真实历史在 baseline 起点具有一阶梯度
+
+更新：2026-09-29。本轮已按用户要求停止，`phase-adjoint`保留为研究资产。以下是该候选的数学合同，区别于 §10 的 R4；不是 LM 优势、首次性或整网稳定性结论。独立于候选代码的核验入口是 [verify_phase_initialization.py](../../experiments/verify_phase_initialization.py)。
+
+### 11.1 需要解决的具体矛盾
+
+R4 的单位 tied 核在全对齐点只有二阶角度变化；signed carrier 打开的是输入读取的一阶信号。若在同一固定坐标系中坚持单位读取和完全相同的单位写回，对任意共同分支源逐步精确复现 baseline 的要求 \(c_t^Tc_j=1\) 迫使初始化地址一致。这是指定接口内的限制，不是 HC、非线性 LM 或多流的普遍不可能性。
+
+R5放松的是**全深度统一的读写幅度**，保留读写同方向、每个子层一次标准 branch、每阶段的严格伴随操作。无独立可学习 write gate；没有新增 teacher、损失或离散控制。
+
+### 11.2 全局坐标的互逆尺度更新
+
+以子层为索引，在一个预先确定的层边界 \(k\) 设置参考地址
+
+\[
+\bar c_\ell=e_1\ (\ell<k),\qquad
+\bar c_\ell=(\cos\alpha,\sin\alpha)^T\ (\ell\ge k),\qquad
+ a_\ell=\bar c_\ell^Te_1>0.
+\tag{35}
+\]
+
+令 \(Q_\ell=[\bar c_\ell,\bar r_\ell]\) 是正交基，局部 router 产生单位 \(\widehat c_\ell=(1,\tanh u_\ell)/\sqrt{1+\tanh^2u_\ell}\)，取 \(c_\ell=Q_\ell\widehat c_\ell\)。每次执行
+
+\[
+z_\ell=c_\ell^TX_\ell/a_\ell,\quad
+\delta_\ell=G_\ell(z_\ell),\quad
+X_{\ell+1}=X_\ell+a_\ell c_\ell\delta_\ell,
+\quad X_0=(x_0,0)^T.
+\tag{36}
+\]
+
+出口按最后阶段的同一规则读取。读取向量 \(q=c/a\)、写入向量 \(b=ac\) 满足 \(q^Tb=1\)；它们同方向且幅度互逆，**不是 R4 的相同单位系数**。所有 \(u=0\) 时，embedding 系数为1，因果分支核为
+
+\[
+K_{tj}=\frac{a_j}{a_t}\bar c_t^T\bar c_j=1\qquad(j<t).
+\tag{37}
+\]
+
+同阶段点积为1、尺度相同；跨边界点积为 \(\cos\alpha=a_t\)，早期 \(a_j=1\)，故也为1。按归纳，每个 branch 输入和出口都精确等于同主干 baseline。这不要求 branch 线性，也不借用 RMSNorm 的近似尺度不变性。
+
+### 11.3 直接实现：只做一次规则的坐标切换
+
+存储局部状态 \(S=Q^TX/a=(h,m)^T\)，阶段内 (36) 就是普通单位 tied 操作：
+
+\[
+z=\widehat c_0h+\widehat c_1m,\qquad
+(h,m)^+=(h,m)+(\widehat c_0\delta,\widehat c_1\delta).
+\tag{38}
+\]
+
+阶段边界转换为
+
+\[
+S^+=\begin{pmatrix}1&\tan\alpha\\-\tan\alpha&1\end{pmatrix}S.
+\tag{39}
+\]
+
+第一版固定 \(\alpha=\pi/4\)，所以实际程序仅一次执行 \((h,m)\leftarrow(h+m,m-h)\)，没有运行时三角函数、逐层大矩阵或可学习 transport。默认边界位于 Transformer block 中间，不从测试结果搜索最好的位置。
+
+零 router 下，边界前 \(m=0\)，边界 active 值不变、辅助值变成 \(-h_k\)；边界后 active 仍按 baseline 顺序相加。因此局部坐标实现避免在 FP32/BF16 中分别累积两半更新再相加造成的初始舍入差。实际 dtype 和完整模型的一致性仍由合同测试验证，不能只引用实数证明。
+
+(39) 的两个奇异值均为 \(\sec\alpha\)，本版为 \(\sqrt2\)，条件数为1，但它**不是等距变换**。全局 (36) 没有相应物理 carry 混合；局部存储程序确实含这一次固定换基和缩放，工程账与导数报告必须列出它。不能称“从头到尾没有混合”或“所有步骤都等距”。
+
+**边界的最小放大合同。** 若要求零辅助入口时 active 保持baseline，又要求辅助历史以系数 \(\beta\) 进入active，任何线性边界的第一行必须为 \((1,\beta)\)，故其谱范数至少为 \(\sqrt{1+\beta^2}\)。选择
+\(A_\beta=\left(\begin{smallmatrix}1&\beta\\-\beta&1\end{smallmatrix}\right)\)
+满足 \(A_\beta^TA_\beta=(1+\beta^2)I\)，达到该范数下界且条件数为1。它把所需的history增益全部放在共同尺度上，不增加边界的方向性条件差；本版选择 \(\beta=1\)。这是经典行范数下界与正交补全，不声称新线性代数定理，也不证明该history增益或最终任务解最优。
+
+### 11.4 一阶信号来自真实 branch，而非入口 carrier
+
+在初始化点，早期子层 \(j<k\) 的相对角参数 \(u_j\) 改变辅助写入为 \(du_j\delta_j\)，但当时读取辅助状态为0、primary 写入的一阶变化为0。后续早期分支仍不读取这项变化。边界 (39) 将它变成 active 扰动 \(\tan\alpha\,du_j\delta_j\)。若 \(g_k\) 是 baseline 在边界 active 上的损失伴随，则
+
+\[
+\left.\partial_{u_j}\mathcal L\right|_0
+ =\tan\alpha\,\langle g_k,\delta_j\rangle,\qquad
+\left.\partial_{u_j}K_{tj}\right|_0=\tan\alpha\quad(j<k\le t).
+\tag{40}
+\]
+
+`tanh` 的零点导数是1。逐 token router 先得到对应 token 的内积，再通过自身特征反传；attention 的跨 token 依赖已包含在 \(g_k\) 中。不同样本/任务可能使内积为0，不保证所有层每个 batch 都有非零梯度。
+
+这条路径让真实的早层 branch 创新绕过边界前的后续分支，直接影响边界表示；它与早层 primary residual gain 的导数不同，后者还会改变其后每个早期分支的输入。区别是可测试的参数化/归纳偏置，不是最终函数类优越性证明。
+
+后阶段的一阶读取也包含 \(-h_k\)，因而**边界长 skip 是强混杂**。理论上可以证明 history 路由的一阶信号存在，不能因此断言最终收益来自可更新历史。必须与从头训练的冻结辅助写入、强 gain、同边界长 skip 和自由写回比较。
+
+### 11.5 保留的局部条件数合同与动态边界
+
+在全局坐标固定 \(c,a\) 后，(36) 的 Jacobian 是
+
+\[
+I+(cc^T)\otimes J_G,
+\tag{41}
+\]
+
+因此与 \(\operatorname{diag}(I+J_G,I)\) 正交相似。互逆尺度在读取与写入的导数中抵消。若固定 \(q=c/a\)、同一 \(G,J_G\) 并限制 \(q^Tb=1\)，写回 \(b=ac\) 无补空间剪切，适用 §10.2 的极端奇异值比较。局部坐标中对应普通 tied 操作；边界 (39) 另行计算。
+
+\(c(S)\) 的动态导数、路由输入的归一化、分支非线性和全网乘积都不受该局部定理控制。由于条件数比较固定读取和 branch，它也没有证明优于强单流、自由增益或更好的任务解。
+
+### 11.6 为何不能免费增加很多非共线阶段
+
+在 (36) 的同源、无 transport、单位方向且 \(a_t=c_{t,0}>0\) 的初始化类内，令 \(r_t=c_{t,1}/c_{t,0}\)。任意早源 \(j<t\) 的 exact-baseline 条件给出
+
+\[
+K_{tj}-1=c_{j,0}c_{j,1}(r_t-r_j)=0.
+\tag{42}
+\]
+
+因此初始方向保持 \(e_1\) 时允许随后切换；一旦某个 writer 的第二坐标非零，所有后续方向必须保持其相同斜率。**两流此构造只允许一次非共线切换。** 这是该接口内的结构限制，不是更一般的 HC、可变 transport 或多流系统下界。需要多次切换时不能靠在代码中重复 (39) 继续声称 baseline-exact。
+
+第一版跨边界的冻结轨迹核还可写成
+
+\[
+K_{tj}=\frac{1+t_j-t_t+t_tt_j}{\sqrt{(1+t_j^2)(1+t_t^2)}}\quad(j<k\le t).
+\tag{43}
+\]
+
+其中 \(t=\tanh u\)。其闭包范围为 \([-1,\sqrt2]\)，所以跨阶段路由可以具有负系数；同阶段仍是原单位Gram核。这个结论只描述同源深度权重，分支本身可带符号，不能由此推出完整模型的表达力优势。阶段内核在全对齐起点仍为二阶，R5只直接打开跨cut的一阶信号。
+
+### 11.7 新颖性与可证伪性
+
+全局 (36) 仍属于 identity-HC 的受限参数类，局部 (39) 则可写成一次固定 HC mixer。Gauge 和固定换基是经典工具；本候选不声称发现新的函数类。待争取的组合是：**精确 baseline 起点、可更新真实历史的一阶路径、阶段内无剪切写回，以及简单的训练实现**。独立首次性尚未建立，主会贡献取决于这一组合是否产生强对照之外的质量—成本收益。
+
+若 frozen/boundary skip 与主方法收益等价，收窄到边界初始化而不维护“有用记忆”故事；若 shear 控制更好，撤销绑定优越性的解释；若 gain/Block AttnRes 更值得采用，不能用漂亮导数维持当前方法。共享 query bank 备选已与 factorized attention、SANA 及 MHAR 对应，不在本版并行开发。
+
+### 11.8 精确参考地址合同的维度预算：每次改变方向需要新维度
+
+这是指定初始化接口的完整刻画，由经典Gram分解得到；不声称新线性代数首次性或一般HC状态下界。设有限串行read/write参考序列为 \(c_{-1}=e_1,c_0,\ldots,c_T\in\mathbb R^n\)，各向量单位，\(a_t=c_t^Te_1>0\)、\(a_{-1}=1\)，无transport，并对**全部**过去源要求 (37)。embedding算第一项，允许最后一项为一个不再写入的末端reader。
+
+合同给出
+
+\[
+c_t^Tc_j=a_t/a_j\quad(j<t),\qquad
+1=a_{-1}\ge a_0\ge\cdots\ge a_T>0.
+\tag{44}
+\]
+
+非增性来自单位向量点积不超过1；若两个尺度相同，点积等于1，故参考方向必须相同。令 \(\rho_t=a_t/a_{t-1}\)。从所有过去源的条件相减，得到
+
+\[
+v_t=c_t-\rho_tc_{t-1},\qquad
+v_t\perp\operatorname{span}\{c_{-1},\ldots,c_{t-1}\},\qquad
+\|v_t\|^2=1-\rho_t^2.
+\tag{45}
+\]
+
+因此每次严格下降都必然加入历史span外的新单位方向：\(c_t=\rho_tc_{t-1}+\sqrt{1-\rho_t^2}e_t\)；尺度不变时不加入新方向。这既是必要分解，也是达到全部核条件的构造。
+
+参考地址Gram \(\Gamma_{ij}=c_i^Tc_j=a_{\max(i,j)}/a_{\min(i,j)}\) 是经典时变系数Gauss–Markov相关矩阵，max/min在这里指索引。折叠重复水平后，其行列式为 \(\prod_{t:a_t<a_{t-1}}(1-\rho_t^2)>0\)。于是
+
+\[
+\operatorname{rank}\Gamma
+=1+\#\{t:a_t<a_{t-1}\}
+=\#\{a_{-1},a_0,\ldots,a_T\}\le n.
+\tag{46}
+\]
+
+另取 \(q_t=c_t/a_t\)，则 \(q_i^Tq_j=1/a_{\min(i,j)}^2\)，为经典Brownian型Gram；新query增量与全部历史query正交。两流最多两个不同初始化参考方向、一次非平凡方向切换。若首个writer已偏离embedding或末端reader引入新方向，也消耗这个名额。这里的秩是**参考地址Gram秩**；初始化全部因果核仍为1，跨切分核秩仍为1，不是“初始化已存了n阶有效记忆”。
+
+限制同样决定结论：只约束相邻源不够；负尺度会允许同一条直线上的符号翻转；多个并列只读输出之间没有串行写入条件，不能人为加入全部pair约束；只改变正交补框架的gauge边界不算新参考方向。近似合同也没有这个精确数量上界：两维可放入任意多个足够接近的方向，核误差仍很小。训练后的实际地址不受初始化阶段数界约束。
+
+[独立CPU核验](../../experiments/verify_phase_rank_contract.py)及[回执](../../results/phase_adjoint_20260929/phase_rank.json)覆盖27项条件和反例，含三流构造、全部因果核、Brownian query Gram、非线性branch逐步baseline等价、负尺度、并列reader及近似核。它们没有实现或训练n3 LM；当前GPU候选仍是原两流一次切换。
+
+### 11.9 末端交汇反例：打开历史梯度并不要求内部阶段
+
+将唯一的 (39) 放在所有body之后、最终Norm/head之前，仍从零辅助流开始，body使用原单位tied更新，最终保留相同的单位output router。零router下body与baseline逐步相同，末端状态成为 \((h_T,-h_T)\)，输出读取primary，初始logits与共同主干梯度保持baseline。
+
+任一body writer \(j\) 的初始角度扰动只写入 \(dm=\delta_jdu_j\)，其后零地址不读取这项扰动。末端 \(h+m\) 将它直接送进输出。令 \(g_T\) 为baseline最终Norm之前的伴随，则
+
+\[
+\left.\partial_{u_j}\mathcal L\right|_0
+=\langle g_T,\delta_j\rangle\quad\text{对全部body writer}.
+\tag{47}
+\]
+
+所以**真实历史的一阶信用分配本身不证明内部交汇必要**。全局末端query为 \((1,1)\)，范数 \(\sqrt2\)；放松发生在出口，并未违反全深度相同单位接口的限制。它也消耗 (46) 的第二个参考方向，不能称为免费额外阶段。
+
+末端output router自身的初始扰动为 \(-h_T\)，主要是径向作用，可被最终RMSNorm的尺度不变性抑制；body writer的 (47) 不依赖这个参数获得强梯度。非零路由后，terminal body会读取辅助历史并改变primary增益，因此它与纯weighted late skip仅在初始一阶上相同，完整训练程序不等价。该接口属于HC/自由出口/late skip邻域，仍无首次性或任务优势结论。
+
+`terminal-adjoint`应在质量结果出现前作为强对照纳入。若它匹配或超过内部phase，优先末端构造并撤销内部交汇必要性的解释；若内部phase更好，再用post-frozen和boundary-skip区分更早使用历史、持续写入与中层skip，而不能把差异全部归于局部无剪切定理。
+
+### 11.10 本轮收尾后的理论判断
+
+一阶历史梯度、局部固定地址谱与精确参考秩的合同仍成立；它们不能承担质量收益或继续扩规模的理由。terminal反例已否定内部交汇对打开历史梯度的必要性；已测同LR前缀中gain优于phase。其局部最优定理固定读取、分支及自作用，不能跨不同gain、动态路由和任务解比较。
+
+零辅助入口、零angle及零shear时，pre角度与独立shear的一阶变化都写入同一创新；初始梯度重复。因此独立Adam参数的同LR比较还改变有效写入步长，不能把shear胜负排他归因于几何。该控制本轮未做质量训练。停止决定与完整证据边界见 [收尾报告](reports/R5_CLOSEOUT_20260929.md)。

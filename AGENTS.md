@@ -1,6 +1,6 @@
 # Current research and document authority
 
-Read `README.md`, then `docs/research/README.md` before research decisions. R4 has an implemented candidate: `adjoint-hc`, a two-stream unit-address tied read/write Transformer with a signed-input carrier and exact baseline initialization. It has contract and local synthetic training evidence, not mature LM or SOTA evidence. RDM remains archived and must not restart by default.
+Read `README.md`, then `docs/research/README.md` before research decisions. R5 diagnosis is closed as of 2026-09-29; `phase-adjoint` and `terminal-adjoint` are retained research assets, not current priorities. No new candidate is approved, and neither training resumption nor expansion is automatic. The seed-419, 33.554M-token pilots did not justify advancing phase over gain; the 268M-token main budgets were not completed. This does not establish failure of the broader method family. See [R5 closeout report](docs/research/reports/R5_CLOSEOUT_20260929.md). R4 `adjoint-hc` retains its original signed-carrier contract and synthetic training receipts as a reference. RDM remains archived and must not restart by default. NeurIPS2027/ICML2027 remain long-term goals without a current promised submission candidate or SOTA claim.
 
 ## Owners
 
@@ -25,6 +25,8 @@ Run `python3 scripts/check_research_docs.py` after documentation changes. Regist
 - Distinguish planned, implemented primitive, full LM implementation, trained, and independently confirmed. Contract tests and synthetic integration training do not establish natural-language quality. Report actual training scope, including that the adjoint probe does train tiny models.
 - Do not promise acceptance or SOTA before comparable evidence. Include DNC, DDL, RMT, xHC and AttnRes where relevant; no firstness claims from missing search hits.
 - Preserve the adjoint algorithm contract: identical unit address for read/write, identity carry, signed carrier baseline initialization, and no hidden independent write gate. Frozen auxiliary writes are an explicit control that breaks the main rule.
+- Keep R5 distinct from R4: the one-time phase switch is not an isometry in stored coordinates. Terminal-only switching already opens all body history gradients, so internal switching requires evidence. Boundary-skip and post-frozen controls have trainable pre-writes; full frozen-aux has a dead pre-route and is a negative control. Do not promote matching initial gradients to proof that persistent memory is useful.
+- If new comparisons are explicitly authorized, use the retained R5 local-cache diagnostic runner. Preserve fixed update/LR schedules, independent data RNG, document-level data splits, nonoverlapping evaluation targets, complete cache manifests and optimizer-boundary resume identity.
 - Prefer one necessary operator, standard end-to-end NTP, regular tensor programs, and a viable initialization. Additional state or controllers require evidence, not narrative completeness.
 - Cost includes memory traffic, intermediates, backward/recompute, kernel launches and communication, not just FLOPs. Unmeasured engineering risks are hypotheses, not measured slowdowns.
 - Protected-slot and frozen-control stability do not prove whole-network Jacobian stability. Historical RDM checks must not be promoted to full-model feasibility or a reason to restart its controller work.
